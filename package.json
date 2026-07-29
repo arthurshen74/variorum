@@ -1,9 +1,31 @@
 {
   "name": "variorum",
-  "private": true,
   "version": "0.1.0",
-  "type": "module",
+  "description": "A single-file artifact editor assisted by a generative AI model of your choosing",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/<you>/variorum.git"
+  },
+  "keywords": [
+    "linkml",
+    "artifact-editor",
+    "llm",
+    "local-first"
+  ],
+  "bin": {
+    "variorum": "bin/variorum.mjs"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
+    "prepublishOnly": "npm run build",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b",
