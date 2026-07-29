@@ -20,8 +20,6 @@ never restate. When asked to "document" something, route it:
   pitch itself changes. Never copy DESIGN.md content into it.
 - **`CLAUDE.md`** (this file) — instructions and hard invariants for coding
   agents. Update only when an invariant or convention is added or changed.
-- **`design/initial-chat-with-claude-fable.md`** — historical transcript.
-  Background reading only. Never edit it.
 
 If a documentation change seems to need the same information in two files,
 put the substance in DESIGN.md and a link in the other file.
@@ -37,7 +35,7 @@ Data model:
 - Generation always uses the **latest saved version** of the unit's
   configuration. Every response is tagged with the exact config version
   (`name.N`) that produced it.
-- A **unit** (conversation + artifact) is bound to one configuration *name*
+- A **unit** (conversation + artifact) is bound to one configuration _name_
   at creation, for life. No re-pointing a unit at a different configuration.
 - Units are atomic: the artifact and its conversation are never deleted
   independently.
@@ -60,7 +58,7 @@ Data model:
   are declared in `design/application-schema.yaml`. The single exception:
   API keys live in localStorage. Export is a full-database dump including
   archived units and all configuration versions.
-- `artifactType` lives on the configuration *name* record — set at
+- `artifactType` lives on the configuration _name_ record — set at
   creation, never edited. Version records contain no mutable fields at
   all; `archived` flags exist only on name records and units.
 
