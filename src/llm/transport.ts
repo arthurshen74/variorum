@@ -1,0 +1,41 @@
+/**
+ * The LLM transport (DESIGN.md "LLM Provider Interface"): an
+ * OpenAI-compatible endpoint, LM Studio first, spoken to directly from the
+ * browser. API key and base URL live in localStorage — the ONE exception
+ * to everything-in-IndexedDB (DESIGN.md "API Keys"; XSS caveats apply).
+ */
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+
+const BASE_URL_KEY = 'variorum.baseUrl';
+const API_KEY_KEY = 'variorum.apiKey';
+
+const DEFAULT_BASE_URL = 'http://localhost:1234/v1'; // LM Studio default
+
+export function getBaseUrl(): string {
+  return localStorage.getItem(BASE_URL_KEY) ?? DEFAULT_BASE_URL;
+}
+
+export function setBaseUrl(url: string): void {
+  localStorage.setItem(BASE_URL_KEY, url);
+}
+
+export function getApiKey(): string | null {
+  return localStorage.getItem(API_KEY_KEY);
+}
+
+export function setApiKey(key: string): void {
+  localStorage.setItem(API_KEY_KEY, key);
+}
+
+/**
+ * Provider factory. The model id, system prompt, and sampling parameters
+ * come from the active configuration version at call time — never from
+ * here (CLAUDE.md: never hardcode them).
+ */
+export function createProvider() {
+  return createOpenAICompatible({
+    name: 'variorum-local',
+    baseURL: getBaseUrl(),
+    apiKey: getApiKey() ?? 'lm-studio', // LM Studio ignores the key
+  });
+}

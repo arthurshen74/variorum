@@ -1,0 +1,26 @@
+Variorum
+Copyright 2026 Arthur Shen
+
+This product includes software developed by third parties, listed below.
+
+--------------------------------------------------------------------------------
+AI Elements (https://github.com/vercel/ai-elements)
+Copyright Vercel, Inc.
+Licensed under the Apache License, Version 2.0.
+
+AI Elements is distributed as a shadcn-style component registry, meaning its
+source files are copied into this repository rather than installed as a runtime
+dependency. Those files remain subject to the Apache License, Version 2.0, and
+any copyright, patent, trademark, or attribution notices contained within them
+must be preserved in redistributions and derivative works.
+--------------------------------------------------------------------------------
+
+The following dependencies are licensed under the MIT License, which requires
+that their own copyright and permission notices be retained in the copies
+distributed with this software (see each package's LICENSE file under
+node_modules/):
+
+  React                (https://github.com/facebook/react)
+  Vite                 (https://github.com/vitejs/vite)
+  Tailwind CSS         (https://github.com/tailwindlabs/tailwindcss)
+  shadcn/ui            (https://github.com/shadcn-ui/ui)

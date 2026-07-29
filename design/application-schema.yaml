@@ -1,0 +1,239 @@
+# application-schema.yaml — the persisted data model for Variorum.
+#
+# This file is the SHAPE; the WHY lives in DESIGN.md ("Persistence & Data
+# Model", "Configurations", "State Architecture"). If a shape changes, it
+# changes here and the rationale changes there.
+#
+# Slot names are camelCase (not LinkML's usual snake_case) so the schema
+# mirrors the TypeScript types one-to-one.
+
+id: https://w3id.org/variorum/application-schema
+name: variorum-application-schema
+title: Variorum Application Schema
+description: >-
+  The persisted data model for Variorum: one IndexedDB database holding
+  exactly three collections — Configuration (name records),
+  ConfigurationVersion (immutable recipes), and Unit. Message and Artifact
+  are shapes only (identifier-less classes inlined into Unit), never
+  collections of their own. The Database class is also the shape of an
+  export/import JSON dump.
+license: https://www.apache.org/licenses/LICENSE-2.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  variorum: https://w3id.org/variorum/
+default_prefix: variorum
+default_range: string
+
+imports:
+  - linkml:types
+
+enums:
+
+  MessageRole:
+    permissible_values:
+      user:
+      assistant:
+
+  ArtifactSource:
+    description: What caused an artifact revision to be captured.
+    permissible_values:
+      llm:
+        description: >-
+          Extracted from a completed LLM response that changed the artifact.
+      manual:
+        description: An explicit human save of a manual edit.
+
+classes:
+
+  Database:
+    tree_root: true
+    description: >-
+      The logical content of the single IndexedDB database, and the exact
+      shape of an export dump. Three collections; nothing else. If it hasn't
+      been pruned, it's in here.
+    attributes:
+      schemaVersion:
+        description: >-
+          Version of this schema that wrote the dump, so import can migrate.
+        range: integer
+        required: true
+      configurations:
+        range: Configuration
+        multivalued: true
+        inlined_as_list: true
+      configurationVersions:
+        range: ConfigurationVersion
+        multivalued: true
+        inlined_as_list: true
+      units:
+        range: Unit
+        multivalued: true
+        inlined_as_list: true
+
+  Configuration:
+    description: >-
+      The name record — one per configuration name, holding what belongs to
+      the NAME and never versions. Everything mutable about a configuration
+      lives here, which is what lets ConfigurationVersion records be
+      immutable down to the last byte.
+    attributes:
+      name:
+        identifier: true
+        description: >-
+          Short configuration name, e.g. "linkml", "react-component". The
+          identity units bind to and versions hang off.
+      description:
+        description: Human-facing — what this configuration is for.
+      artifactType:
+        description: >-
+          e.g. "yaml", "typescript". Drives everything downstream — the
+          fence language the extractor lifts from responses, the editor
+          mode, and the file extension on export. Set at creation, never
+          edited: a "linkml" that suddenly emits TypeScript isn't a new
+          version, it's a different configuration.
+        required: true
+      archived:
+        description: >-
+          Soft retirement — hides the configuration from pickers for new
+          units. Versions are never destroyed; existing units and response
+          tags keep resolving.
+        range: boolean
+        required: true
+
+  ConfigurationVersion:
+    description: >-
+      One immutable version of a configuration's recipe. Identity is the
+      composite (name, version). A "change" is always a new record with
+      version + 1, minted by an explicit human Save — never an edit of an
+      existing record. Contains no mutable field at all: linkml.4 means the
+      same bytes forever, no asterisk.
+    unique_keys:
+      name_version:
+        unique_key_slots:
+          - name
+          - version
+    attributes:
+      name:
+        description: >-
+          The Configuration (name record) this version belongs to. Half of
+          the composite key.
+        required: true
+      version:
+        description: 1-based, append-only. Half of the composite key.
+        range: integer
+        required: true
+      modelName:
+        description: Model identifier the LLM server should run.
+        required: true
+      systemPrompt:
+        required: true
+      temperature:
+        range: float
+      topP:
+        range: float
+      topK:
+        description: Not standard OpenAI; LM Studio accepts it.
+        range: integer
+      reasoningEffort:
+        description: >-
+          Stored and sent, honored only where the server supports it — see
+          DESIGN.md.
+
+  Unit:
+    description: >-
+      The atomic core record — a conversation plus its artifact revision
+      history, stored as ONE document. Messages and artifacts are inlined,
+      so atomicity is structural: there is no way to delete the artifact
+      and keep the conversation, because there is nothing to delete
+      independently. Consequence — every write is a whole-document write;
+      see "single tab per unit" in DESIGN.md.
+    attributes:
+      id:
+        identifier: true
+        description: >-
+          Surrogate key (uuid). conversationName is a mutable label, not an
+          identity.
+      conversationName:
+        required: true
+      configName:
+        description: >-
+          The Configuration (name record) this unit was created under,
+          bound for life. Deliberately a name and not a version — each
+          response uses the latest saved version at send time, and messages
+          record which (configName + Message.configVersion = "linkml.4").
+        required: true
+      createdAt:
+        range: datetime
+        required: true
+      archived:
+        description: >-
+          Soft delete. Archived units are invisible to the LLM (absent from
+          list, unloadable) and restorable from the interface. Only the
+          interface-only prune actually destroys them.
+        range: boolean
+        required: true
+      messages:
+        range: Message
+        multivalued: true
+        inlined_as_list: true
+      artifacts:
+        description: Full revision history, oldest first.
+        range: Artifact
+        multivalued: true
+        inlined_as_list: true
+
+  Message:
+    description: >-
+      A shape, not a collection — inlined into Unit, no identity of its
+      own. One conversation turn.
+    attributes:
+      role:
+        range: MessageRole
+        required: true
+      configVersion:
+        description: >-
+          With the owning unit's configName, reconstructs the exact
+          immutable ConfigurationVersion that governed this exchange.
+        range: integer
+        required: true
+      sentAt:
+        range: datetime
+        required: true
+      receivedFinishedAt:
+        description: >-
+          Assistant messages only — when the completion finished streaming.
+        range: datetime
+      content:
+        required: true
+
+  Artifact:
+    description: >-
+      A shape, not a collection — inlined into Unit. One captured revision
+      of the unit's artifact. Revisions are captured on each completed LLM
+      response that changes the artifact and on each explicit manual save;
+      never on debounced autosave.
+    attributes:
+      version:
+        description: >-
+          1-based, append-only, assigned by the repository. Explicit rather
+          than inferred from array position — a revision's designation
+          ("revision 3") shouldn't depend on where it happens to sit in
+          storage. The user-facing name of a revision, exactly as
+          configuration versions are for recipes.
+        range: integer
+        required: true
+      savedAt:
+        range: datetime
+        required: true
+      source:
+        range: ArtifactSource
+        required: true
+      messageIndex:
+        description: >-
+          When source is llm — index into the owning unit's messages of the
+          assistant message whose response produced this revision. Stitches
+          the revision history to the exact configuration version.
+        range: integer
+      content:
+        required: true
