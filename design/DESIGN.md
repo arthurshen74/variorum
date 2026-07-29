@@ -65,6 +65,37 @@ proxies from your machine to your machine. If this ever points at a cloud
 provider that refuses browser origins, a thin proxy is the designated
 extension point; until then it stays out of the repo.
 
+## Distribution (npm)
+
+Variorum ships on npm as a prebuilt SPA: `npx variorum` starts a tiny
+hand-written static file server (`bin/variorum.mjs` — `node:http`, zero
+dependencies) that serves the packed `dist/` with an `index.html` SPA
+fallback. Three decisions worth recording:
+
+- **A static server is delivery, not a backend.** The "no server" rule
+  above forbids an *application* backend — anything that holds state,
+  proxies LLM traffic, or owns an API. The bin script does none of that:
+  it maps URLs to files in `dist/` and knows nothing about the app it
+  serves. It exists only because browsers won't run a module SPA off
+  `file://`. Every piece of application logic still lives in the browser;
+  the invariant stands.
+
+- **Bind `127.0.0.1`, never `0.0.0.0`.** Nothing about this tool needs to
+  be reachable from another machine — the model endpoint is localhost and
+  all data lives in the local browser — so the server listens on loopback
+  only. Port `5177` by default, `PORT` env to override.
+
+- **The `ignore-scripts` publish gotcha.** `.npmrc` sets
+  `ignore-scripts=true` so installs never execute third-party lifecycle
+  scripts (see the lockfile discipline in [CLAUDE.md](../CLAUDE.md)). The
+  flag is symmetric, though: it also suppresses *our own* lifecycle
+  scripts, so `prepublishOnly` — which runs the build — silently does not
+  run under `npm publish`, and publishing without a manual `npm run build`
+  first packs a stale or missing `dist/`. Hence the bin script's 500
+  message ("was the package built before packing?") and the rule: build
+  explicitly, then publish. The safety trade is deliberate; the manual
+  step is the price.
+
 ## Persistence & Data Model
 
 Everything lives in a single IndexedDB database. One database, one export, one

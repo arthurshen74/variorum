@@ -13,6 +13,8 @@ This is a tool for a simpleton like me who can only think and design,
 one artifact at a time. If that sounds like you too, then feel free
 to clone or fork until your heart's content.
 
+To try it: `npx variorum`, then open the printed localhost URL.
+
 What kind of artifact you're editing is not hardcoded. Variorum began
 life as a LinkML editor, but the artifact type, the system prompt, and
 the sampling behavior all live in a named, versioned **configuration** —
