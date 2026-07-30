@@ -18,7 +18,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 - Tests: src/domain/merge.validation.test.ts — filter:
   npx vitest run src/domain/merge.validation.test.ts
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-07-30)
 
 ### G2 — replaceDatabase end to end
 - Intent: clearAndPutMany (atomic wipe-and-load) + the repository method;

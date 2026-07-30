@@ -39,10 +39,22 @@ export interface MergePlan {
 
 /** The dump boundary guards shared by import and replace. Throws on refusal. */
 export function assertValidDump(
-  _localSchemaVersion: number,
-  _dump: DatabaseDump,
+  localSchemaVersion: number,
+  dump: DatabaseDump,
 ): void {
-  throw new Error('not implemented: assertValidDump');
+  if (dump.schemaVersion !== localSchemaVersion) {
+    throw new Error(
+      `dump schema version ${dump.schemaVersion} does not match local ${localSchemaVersion}`,
+    );
+  }
+  const names = new Set(dump.configurations.map((config) => config.name));
+  for (const unit of dump.units) {
+    if (!names.has(unit.configName)) {
+      throw new Error(
+        `dump unit ${unit.id} references configuration ${unit.configName}, absent from the dump`,
+      );
+    }
+  }
 }
 
 /** mintUnitId supplies fresh uuids for kept-both clones. */
@@ -51,19 +63,7 @@ export function planMerge(
   incoming: DatabaseDump,
   mintUnitId: () => string,
 ): MergePlan {
-  if (incoming.schemaVersion !== local.schemaVersion) {
-    throw new Error(
-      `import: dump schema version ${incoming.schemaVersion} does not match local ${local.schemaVersion}`,
-    );
-  }
-  const incomingLineages = lineagesOf(incoming);
-  for (const unit of incoming.units) {
-    if (!incomingLineages.has(unit.configName)) {
-      throw new Error(
-        `import: unit ${unit.id} references configuration ${unit.configName}, absent from the dump`,
-      );
-    }
-  }
+  assertValidDump(local.schemaVersion, incoming);
 
   const plan: MergePlan = {
     configurations: [],
@@ -80,7 +80,7 @@ export function planMerge(
     },
   };
 
-  const rewrites = mergeLineages(lineagesOf(local), incomingLineages, plan);
+  const rewrites = mergeLineages(lineagesOf(local), lineagesOf(incoming), plan);
   mergeUnits(local.units, incoming.units, rewrites, mintUnitId, plan);
   return plan;
 }
