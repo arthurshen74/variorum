@@ -108,7 +108,10 @@ export interface ImportReport {
   configurationsAdded: string[];
   /** Lineages that gained versions from the dump. */
   configurationsFastForwarded: { name: string; newVersions: number[] }[];
-  /** Diverged lineages brought in under a fresh name (linkml → linkml~2). */
+  /**
+   * Where diverged incoming lineages landed (linkml → linkml~2) — the
+   * target either freshly minted or reused from a prior import.
+   */
   lineagesRenamed: { from: string; to: string }[];
   /** Unit ids new to this database. */
   unitsAdded: string[];

@@ -376,7 +376,7 @@ class Repository implements VariorumRepository {
         configurationVersions: s.configurationVersions,
         units: s.units,
       };
-      const plan = planMerge(local, dump); // throws until merge lands
+      const plan = planMerge(local, dump, () => crypto.randomUUID());
       await putMany(this.requireDb(), [
         ...plan.configurations.map((doc) => ({
           store: 'configurations' as const,

@@ -8,6 +8,16 @@ anything; it is the design source of truth.
 
 ## Coding Conventions
 
+So the whole point of coding conventions and guidance is what MY definition of good
+code is. So, some basic statements first before going into detail:
+
+- Good code is as simple as it needs to be, and simple can be complicated enough.
+- Good code must be understandable by a human. I did NOT say easily understandable but understandable enough.
+- Here is my new fundamental: Good code must be understandable enough by a generative large language model given a reasonable context traversal depth, say two levels of traversal internally (be careful about traversing into an external library). This context traversal depth may change with time and with the nature of the project. For this project, 2 levels should be ok.
+- Good code must be observable and traceable.
+
+So, with that said, the details:
+
 ### Comments
 
 - Default to writing simple comments, what it does, NOT WHY.

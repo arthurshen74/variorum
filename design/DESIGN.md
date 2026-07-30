@@ -327,6 +327,68 @@ stakes are a label.
 fast-forwarded, kept-both, and any renamed lineages — because a merge
 whose outcome you can't see is a merge you won't trust.
 
+### Settled edges
+
+The section above, applied to its corner cases — settled with the
+implementation, recorded here because each had at least one other
+defensible answer:
+
+- **Rename targets.** "Bumping the suffix until free" means: the fresh
+  name is `<incoming name>~K` for the smallest K ≥ 2 unused anywhere the
+  merge can see — local names, every name in the dump, and names already
+  minted by this same merge. The incoming name is an opaque base: a
+  `linkml~2` that diverges again renames to `linkml~2~2`, never by
+  arithmetic on a suffix a user might legitimately have typed. A
+  timestamp suffix was considered and rejected: planMerge is pure and
+  clock-free, same-second renames would still need the bump loop, and
+  the counter reads better in every picker that outlives the merge.
+
+- **Metadata vs. "same bytes."** The trichotomy compares the immutable
+  payload only — a lineage's version recipes, a unit's messages and
+  artifacts. Records differing only in mutable metadata (archived,
+  description, conversationName) are *identical*: skip, local metadata
+  untouched. Incoming metadata is read only when the merge writes a NEW
+  record — added lineages and units, kept-both clones — where it rides
+  in unchanged, because there is no local counterpart for local-wins to
+  defer to.
+
+- **Schema versions.** The merge refuses a dump whose `schemaVersion`
+  differs from the local one. Import is a boundary; there is only
+  version 1 today, and migration machinery arrives with version 2, not
+  before.
+
+- **The report counts entities, not records.** One identical lineage —
+  name record plus all its versions — is one skip; one identical unit is
+  one. Incoming-is-an-ancestor (local kept going, incoming didn't) is
+  also one skip: *fast-forwarded* is reserved for records that actually
+  gained history. Every incoming entity lands in exactly one bucket.
+
+- **A renamed lineage demotes its units' fast-forwards to keep-both.**
+  The tempting graft: local unit at messages 1–8, incoming at 1–10, a
+  clean prefix — but the unit's lineage diverged, so incoming came in as
+  `linkml~2`, and messages 9–10 carry version tags that meant *incoming's*
+  recipe bytes. Appending them to the local unit — bound to `linkml` for
+  life — would re-point those tags at local's diverged bytes: precisely
+  the lie the rename exists to prevent. A local unit is modified by
+  exactly one merge operation — a clean same-lineage fast-forward — or
+  not at all. Skips are exempt: writing nothing moves no tag.
+
+- **Minting is the last resort: divergence first hunts for a lossless
+  landing.** Without this, every re-import of a diverged dump would
+  make room *again* — a fresh rename, a fresh wave of clones — and
+  "importing the same dump twice is a no-op" would be false. So when
+  the identity match diverges, the merge scans the family of prior
+  landing spots (`linkml~2`, `linkml~3`, … for a lineage; units bound
+  to the post-rewrite configName for a unit) with the same comparison
+  it always uses: a member that already *contains* the incoming record
+  → skip; failing that, a member the incoming record strictly extends
+  → fast-forward it; only when every candidate diverges is a fresh
+  name or uuid minted. Preference is skip, then fast-forward (longest
+  common history first, ties to the lowest suffix / uuid), then mint —
+  writes-nothing beats writes-something beats makes-new. The rewrite
+  target for the dump's units is whichever name the lineage landed on,
+  and `lineagesRenamed` reports the mapping whether minted or reused.
+
 ## Configurations
 
 A **configuration** is a named recipe for producing one kind of artifact,
