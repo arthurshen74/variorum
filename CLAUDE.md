@@ -20,6 +20,8 @@ never restate. When asked to "document" something, route it:
   pitch itself changes. Never copy DESIGN.md content into it.
 - **`CLAUDE.md`** (this file) — instructions and hard invariants for coding
   agents. Update only when an invariant or convention is added or changed.
+- **`.claude/skills/tdd/SKILL.md`** — how new work gets done: the triage,
+  spec, and test-first gates. Update only when the workflow itself changes.
 
 If a documentation change seems to need the same information in two files,
 put the substance in DESIGN.md and a link in the other file.
@@ -87,6 +89,22 @@ LLM tool surface:
   prompt — model write access would let prompt injection persist itself.
 - Never name a model-facing tool with "delete" semantics; archiving is the
   strongest verb the model holds.
+
+## Development workflow
+
+- All new capabilities and system-wide properties follow the TDD workflow
+  skill (`.claude/skills/tdd/SKILL.md`; the human invokes it as `/tdd`):
+  triage → spec gate → test-list gate → red → green. Its STOP GATES are
+  mandatory — never write implementation code before the test list is
+  approved.
+- Definition of done:
+  `npm run typecheck && npx vitest run && npx playwright test` — all green.
+- Tests are the spec. NEVER modify a test to make it pass in the same
+  session that implements the code under test; if a test looks wrong, stop
+  and ask the human.
+- Harness: Vitest, node environment (fake-indexeddb for repository tests)
+  for the inner loop; Playwright in real Chromium for acceptance — one spec
+  per hard invariant touched. No jsdom tests for CSS or visual behavior.
 
 ## Conventions
 
