@@ -6,6 +6,65 @@ OpenAI-compatible LLM endpoint (LM Studio first). There is no server and no
 backend — do not add one. Read `design/DESIGN.md` before implementing
 anything; it is the design source of truth.
 
+## Coding Conventions
+
+### Comments
+
+- Default to writing simple comments, what it does, NOT WHY.
+- Only specify the _why_ when it is not obvious: a hidden constraint, a subtle invariant, a workaround for a specific bug, behaviour that would surprise a reader.
+- Write simple and short _what_ comments where appropriate for a senior engineer.
+- Never write justifications, change history, or task references ("added for the X flow", "used by Y", "fixes #123"). Those belong in PR descriptions and rot.
+- You may write multi-line, multi-paragraph doc strings only at the top of a file and that is to provide a human readable description of the contents of the file (modules, functions, etc.)
+
+### Constants and magic strings
+
+- Avoid magic strings. A string literal that names something in an external contract — a datastore field name, an index/column/key name, a discriminator value — must be a module-level `SCREAMING_SNAKE` constant, not an inline literal.
+- The constant is the single source of truth: the _same_ constant is referenced on every side of the contract. A field name used when writing must be the same constant used when reading (e.g. ES `index_*` and `search` reference one `FIELD_PROJECT_UUID`, never two copies of `"project_uuid"`). This is what stops a rename from silently breaking one side.
+- Controlled value sets (discriminators, status vocabularies) are `StrEnum`, not loose constants — see `ChunkType`, `IngestStatus`. Use the enum member everywhere; never re-type its value.
+- Scope the constant to the module that owns the contract. Don't build a global "constants" dumping ground; a field name lives next to the client that owns the index/table.
+- This is not a DRY judgement call — a contract literal used in two places is promoted on the _second_ use, not the fourth.
+
+### DRY (and when not)
+
+- Duplicate freely up to three similar instances. The shape of the abstraction is rarely clear before then.
+- Keep a list of abstraction candidates in `DESIGN_ABSTRACTION_CANDIDATES.md`. This list will be populated with 2 similar instances as "Longshots" and 3 similar instances as "Good Bet".
+- Extract on the fourth instance, or when the duplication crosses a module boundary. If the abstraction is in the candidates list, remove it once the extraction is complete.
+- Premature abstraction is worse than duplication. Three explicit, similar functions are easier to change than one parameterised helper guessed at the wrong dimensions.
+- Inform the human if a Longshot abstraction candidate is encountered. The human may want to build the abstraction early if they know they will need it.
+
+### Abstractions, layers, helpers
+
+- Don't add features, refactor, or introduce abstractions beyond what the task requires.
+- A bug fix doesn't need surrounding cleanup. A one-shot operation doesn't need a helper.
+- No half-finished implementations. No "we might want this later" hooks.
+
+### Error handling
+
+- Trust internal code and framework guarantees. Don't validate that a non-nullable field is non-null.
+- Validate at system boundaries only: user input, external APIs, file parses, LLM responses (already enforced via Pydantic schemas).
+- Don't add fallbacks for scenarios that can't happen. If they happen, you want a crash and a stack trace, not silent recovery.
+- Logs at boundaries, not inside helpers. One log per failure, not three.
+
+### Backwards compatibility
+
+- Don't add backwards-compat shims, deprecated re-exports, or `# removed` placeholder comments.
+- If something is unused, delete it. Git history is the audit trail.
+- No feature flags for code paths that can simply be replaced.
+
+### TypeScript / React specifics
+
+- No `any`. If a type is genuinely unknown, use `unknown` and narrow.
+- Components are function components. No class components.
+- One component per file, named export. Co-located styles only if Tailwind isn't enough (it usually is).
+- Imports ordered: react/third-party, `@/` first-party, relative. Auto-managed by Prettier/ESLint.
+- Prefer composition over `useEffect`. If you reach for `useEffect`, ask whether Zustand or a derived value would do the job.
+
+### File and function size
+
+- Function over ~50 lines: consider splitting. Not a hard rule — clarity wins.
+- File over ~400 lines: probably multiple concerns. Split.
+- Module (directory) over ~10 files: probably needs a sub-grouping.
+
 ## Documentation routing — where prose goes
 
 Every fact lives in exactly ONE file. Other files summarize and link; they
@@ -131,3 +190,5 @@ LLM tool surface:
   store, the repository, or other components. The host imports extensions
   only via `registry.ts`. Every extension component is `React.lazy`. The
   extension contract gains a field only when a SECOND consumer needs it.
+- Don't add emojis to code, comments, commit messages, or documentation unless explicitly asked.
+- Don't run `git commit` or `git push` — I do all commits myself. Leave changes in the working tree and report what changed; draft a commit message only when I ask for one. `git add` only on explicit request.
