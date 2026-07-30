@@ -38,7 +38,7 @@ STOP GATE — the human approves the plan. Wait.
 
 Set up an isolated worktree:
 
-- `git worktree add ../<repo-dir-name>-<feature>-<group> -b <feature>/<group>`
+- `git worktree add .claude/worktrees/<repo-dir-name>-<feature>-<group> -b <feature>/<group>`
   from current HEAD. All work happens inside it.
 - `npm ci` there (worktrees share no `node_modules`).
 - Run all test commands with `CI=1` so Playwright starts its own dev
@@ -53,7 +53,7 @@ Work the task list under these rules:
   amends the manifest, not you.
 - The ratchet: this group's filters green, then the FULL gate green
   (`CI=1 npm run typecheck && CI=1 npx vitest run && CI=1 npx playwright
-  test`). No previously green test may go red.
+test`). No previously green test may go red.
 - Tests are locked. Amendment protocol: if a test appears wrong or the
   spec ambiguous, STOP; name the test and explain why the SPEC is wrong
   or unclear; wait for the human's ruling. On approval: spec delta
