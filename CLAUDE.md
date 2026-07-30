@@ -120,16 +120,23 @@ Data model:
 - Artifact revisions are captured on each completed LLM response that changes
   the artifact and on each explicit manual save — no debounced autosave
   revisions.
-- Deletion is **soft** everywhere (archived flag). The interface-only "prune
-  archived conversations" function is the ONLY true delete in the system, and
-  it never touches configurations. Prune REQUIRES a fresh export: the
-  repository refuses to prune unless an export has happened since the last
-  mutation.
-- Import is a MERGE, never a replace. It never overwrites, renumbers, or
-  deletes: identical records are skipped, strict prefixes fast-forward,
-  and diverged histories are kept BOTH (fresh uuid for units; fresh name
-  for configuration lineages, rewriting incoming units' configName). Never
-  splice diverged conversations. See DESIGN.md "Import Is a Merge".
+- Deletion is **soft** everywhere (archived flag). The system's ONLY true
+  deletes are two interface-only operations. Prune deletes archived units
+  only, never configurations, and REQUIRES a fresh export: the repository
+  refuses unless an export has happened since the last mutation. Replace
+  (`replaceDatabase`) wipes the whole database and loads a dump wholesale
+  in one atomic transaction; it MUST capture and return a full pre-wipe
+  backup before any byte is deleted, and any UI invoking it downloads that
+  backup unconditionally before reporting success — its undo is another
+  replace.
+- `importDatabase` is a MERGE, never a replace. It never overwrites,
+  renumbers, or deletes: identical records are skipped, strict prefixes
+  fast-forward, and diverged histories are kept BOTH (fresh uuid for units;
+  fresh name for configuration lineages, rewriting incoming units'
+  configName). Never splice diverged conversations. Wholesale replacement
+  exists ONLY as the separate `replaceDatabase` (see the deletion bullet) —
+  never as a mode, flag, or fallback of import. See DESIGN.md "Import Is a
+  Merge".
 - Everything persists in ONE IndexedDB database, exactly three object
   stores: `configurations` (name records: description, artifactType,
   archived), `configurationVersions` (immutable recipes), `units`. Shapes
@@ -148,9 +155,10 @@ surface is `design/repository-api.ts`):
 - ONE Zustand store, hydrated from IndexedDB once at boot. The repository
   module is the ONLY code that writes IndexedDB and the ONLY code that
   updates the store. Write order: IndexedDB `put` first, then store update.
-- The IndexedDB wrapper is hand-written (open/getAll/put/delete-by-key
-  only). Do NOT introduce Redux, React Query, Dexie, idb, or any other
-  state or storage library.
+- The IndexedDB wrapper is hand-written
+  (open/getAll/put/putMany/clearAndPutMany/deleteByKey only). Do NOT
+  introduce Redux, React Query, Dexie, idb, or any other state or storage
+  library.
 - Configuration draft state is component-local only — never in the Zustand
   store, never persisted, never in a request.
 - Streaming chat state lives in the AI SDK's `useChat`; it is committed to
@@ -162,7 +170,7 @@ LLM tool surface:
   design. The model gets ONLY: create unit, load unit, list units (active
   only), and `archive_conversation` (human-confirmation gated). It must never
   see archived units.
-- The model NEVER gets tools for: export, import, prune, restore, or any
+- The model NEVER gets tools for: export, import, replace, prune, restore, or any
   read/write access to configurations. Configurations contain the system
   prompt — model write access would let prompt injection persist itself.
 - Never name a model-facing tool with "delete" semantics; archiving is the

@@ -428,6 +428,10 @@ class Repository implements VariorumRepository {
       return archived.length;
     });
   }
+
+  replaceDatabase(_dump: DatabaseDump): Promise<DatabaseDump> {
+    throw new Error('not implemented: replaceDatabase');
+  }
 }
 
 /** Replace-or-append by key: plan records win over existing ones. */

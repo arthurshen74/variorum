@@ -3,11 +3,12 @@
  * Named indexed-db-wrapper deliberately: there is an npm library called
  * `idb`, and no file in this repo may be mistakable for it.
  *
- * The entire surface: openDatabase / getAll / put / putMany / deleteByKey.
- * Single-operation transactions everywhere except putMany, which batches a
- * whole plan into one transaction — createConfiguration's name record plus
- * its version 1, importDatabase's merge plan. Do not grow this file without
- * a reason of that caliber.
+ * The entire surface: openDatabase / getAll / put / putMany /
+ * clearAndPutMany / deleteByKey. Single-operation transactions everywhere
+ * except putMany — which batches a whole plan into one transaction:
+ * createConfiguration's name record plus its version 1, importDatabase's
+ * merge plan — and clearAndPutMany, replaceDatabase's atomic wipe-and-load.
+ * Do not grow this file without a reason of that caliber.
  */
 
 const DB_NAME = 'variorum';
@@ -89,6 +90,19 @@ export function putMany(
       tx.objectStore(store).put(doc);
     }
   });
+}
+
+/**
+ * Clear ALL THREE stores and write the docs, in ONE readwrite transaction:
+ * a crash leaves the old database or the new one, never half. The scope is
+ * always all of STORE_NAMES — a store with no incoming docs is still
+ * cleared, so an empty write set is NOT a no-op (unlike putMany).
+ */
+export function clearAndPutMany(
+  _db: IDBDatabase,
+  _writes: ReadonlyArray<{ store: StoreName; doc: unknown }>,
+): Promise<void> {
+  throw new Error('not implemented: clearAndPutMany');
 }
 
 export function deleteByKey(

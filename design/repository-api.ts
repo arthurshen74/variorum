@@ -39,11 +39,14 @@
 //   3. WRITE ORDER: IndexedDB `put` first (durability), then store update.
 //      Nothing else touches either.
 //
-//   4. The IDB wrapper surface grows by exactly one call: `putMany`, a
-//      single transaction spanning both configuration stores. It exists
-//      for one caller — createConfiguration — so that a crash can never
-//      leave a name record without its version 1. Wrapper total:
-//      open/getAll/put/putMany/deleteByKey.
+//   4. The IDB wrapper surface grows by exactly two calls beyond the
+//      basics. `putMany`: one transaction spanning both configuration
+//      stores, for one caller — createConfiguration — so a crash can
+//      never leave a name record without its version 1. `clearAndPutMany`:
+//      one transaction that clears ALL three stores and writes a whole
+//      dump, for one caller — replaceDatabase — so a crash can never
+//      leave half a database. Wrapper total:
+//      open/getAll/put/putMany/clearAndPutMany/deleteByKey.
 //
 // Types mirror application-schema.yaml one-to-one (hand-written for now;
 // the schema is the source of truth if they ever disagree).
@@ -277,17 +280,32 @@ export interface VariorumRepository {
    * strict prefix → fast-forward; diverged → keep both (fresh uuid for
    * units, fresh name for configuration lineages, with incoming units'
    * configName rewritten). Importing into an empty database IS restore.
+   * Wholesale replacement is replaceDatabase, never a mode of this method.
    */
   importDatabase(dump: DatabaseDump): Promise<ImportReport>;
 
   /**
-   * The only true delete in the system. Deletes ALL archived units;
-   * returns how many. Never touches configurations (see DESIGN.md,
-   * "Prune"). REQUIRES a fresh export: throws unless exportDatabase has
-   * run since the last mutation — the prune dialog runs the export as
-   * part of its flow, and this backstop makes the requirement physical
-   * rather than polite. A regretted prune is undone by merge-importing
-   * the dump just written.
+   * One of the system's two true deletes (the other is replaceDatabase).
+   * Deletes ALL archived units; returns how many. Never touches
+   * configurations (see DESIGN.md, "Prune"). REQUIRES a fresh export:
+   * throws unless exportDatabase has run since the last mutation — the
+   * prune dialog runs the export as part of its flow, and this backstop
+   * makes the requirement physical rather than polite. A regretted prune
+   * is undone by merge-importing the dump just written.
    */
   pruneArchivedUnits(): Promise<number>;
+
+  /**
+   * The wholesale door (DESIGN.md "Replace — the wholesale door"): wipe
+   * all three stores and load the dump, in ONE transaction — a crash
+   * leaves the old database or the new one, never half. Refuses (same
+   * guards as import: schemaVersion mismatch, unit referencing a
+   * configuration absent from the dump) BEFORE any capture or wipe,
+   * leaving database, store, and dirty bit untouched. Captures a full
+   * pre-wipe backup and returns it — unconditionally, no way to skip;
+   * the calling dialog downloads it before reporting success. A
+   * regretted replace is undone by another replace:
+   * replaceDatabase(backup) restores exactly. Marks dirtySinceExport.
+   */
+  replaceDatabase(dump: DatabaseDump): Promise<DatabaseDump>;
 }

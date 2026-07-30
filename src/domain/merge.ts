@@ -37,6 +37,14 @@ export interface MergePlan {
   report: ImportReport;
 }
 
+/** The dump boundary guards shared by import and replace. Throws on refusal. */
+export function assertValidDump(
+  _localSchemaVersion: number,
+  _dump: DatabaseDump,
+): void {
+  throw new Error('not implemented: assertValidDump');
+}
+
 /** mintUnitId supplies fresh uuids for kept-both clones. */
 export function planMerge(
   local: DatabaseDump,

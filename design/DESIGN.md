@@ -187,8 +187,9 @@ name you can say out loud and trust.
 **Soft delete.** "Deleting" a unit never destroys it immediately — it sets an
 archived flag. Archived units are invisible to the LLM (they don't appear in
 `list` and can't be `load`ed by it) and can be restored through the interface.
-The only way data actually ceases to exist is the interface-only _prune
-archived conversations_ function.
+The only ways data actually ceases to exist are the two interface-only
+danger-zone operations: _prune archived conversations_, and _replace_ (see
+"Replace — the wholesale door" below).
 
 **Prune — why a true delete is safe to have at all.** Every reference in the
 data model points one way: units point at configurations (`configName`),
@@ -204,7 +205,9 @@ configuration is a prompt and a few floats, and the whole database is
 megabytes. Prune exists for *privacy*: "this is truly gone from my disk" is
 a right worth keeping over your own database, and without prune the only
 true delete would be dropping the entire IndexedDB database in devtools — a
-far blunter instrument. So prune stays: interface-only, archived-units-only,
+far blunter instrument. (Replace is now the sanctioned blunt instrument —
+and unlike devtools, it cannot run without capturing its own backup first.)
+So prune stays: interface-only, archived-units-only,
 double-gated by the archive step that precedes it, and structurally
 incapable of collateral damage.
 
@@ -214,27 +217,38 @@ backstops it: `pruneArchivedUnits` refuses unless an export has happened
 since the last mutation. A regretted prune is therefore always recoverable
 from the dump just written — and because import is a merge, recovery is
 just importing that dump: the pruned units come straight back as additions.
-The one true delete in the system ships with its own undo.
+Both true deletes in the system ship with their own undo.
 
 **Export/import.** Export is a true backup: a versioned JSON dump of the
 entire database, archived units and all configuration versions included. If it
-hasn't been pruned, it's in the export. Import is a merge, never a replace —
-it has its own section below.
+hasn't been pruned, it's in the export. Import is a merge; replace — wiping
+the database and loading a dump wholesale — is a deliberately separate
+operation with a mandatory pre-wipe backup. Both have their own sections
+below.
 
 ## Import Is a Merge
 
 Import never overwrites, never renumbers, never deletes. **When histories
-disagree, import makes room instead.** That is the axiom; everything in this
-section is that one sentence applied case by case.
+disagree, import makes room instead.** That is the axiom of
+`importDatabase`; everything in this section is that one sentence applied
+case by case. (Replace — the wholesale door that deliberately is NOT
+import — has its own subsection at the end.)
 
-Why merge and not replace-all: a replace-all import would silently delete
-everything not in the dump — the biggest true delete in the system, bigger
-than prune, hiding behind a button labeled "import." Merge-import only ever
-adds. It also *subsumes* restore: importing into an empty database is a
-merge with nothing to collide with, which is exactly a restore. One
-semantic, both use cases. And because every merge decision below uses only
-content comparison — never timestamps — nothing depends on trusting wall
-clocks across machines.
+Why the default is merge, and why replace exists anyway: a replace-all
+*import* would silently delete everything not in the dump — the biggest
+true delete in the system, bigger than prune, hiding behind a button
+labeled "import." That objection stands, so import is and stays a merge:
+it only ever adds, and it *subsumes* restore — importing into an empty
+database is a merge with nothing to collide with, which is exactly a
+restore. And because every merge decision below uses only content
+comparison — never timestamps — nothing depends on trusting wall clocks
+across machines. But merge cannot express one honest need: making this
+machine exactly equal a saved dump — moving to a clean machine, resetting
+a scratch database — without dragging every local divergence along as `~2`
+lineages and "(imported)" clones. That need is served by replace: its own
+method behind its own confirmation, never spelled "import," which answers
+the hidden-delete objection the way prune does — by shipping with a
+mandatory, mechanically captured undo.
 
 **The trichotomy.** Every record in the dump lands in exactly one bucket
 against its local counterpart (matched by identity: configuration name,
@@ -389,6 +403,52 @@ defensible answer:
   target for the dump's units is whichever name the lineage landed on,
   and `lineagesRenamed` reports the mapping whether minted or reused.
 
+### Replace — the wholesale door
+
+Merge answers "combine these histories"; replace answers "make this machine
+exactly that dump." `replaceDatabase(dump)` wipes all three stores and
+loads the dump wholesale. It is deliberately NOT a mode, flag, or fallback
+of import — a separate method, behind its own confirmation, never spelled
+"import," because the biggest true delete in the system must never hide
+behind a milder word.
+
+**The mandatory backup.** Before any byte is wiped, `replaceDatabase`
+captures a full dump of the database as it stands and returns it — the
+backup IS the return value, unconditional, with no parameter to skip it.
+The repository cannot write files and has nowhere durable to stash the
+backup (no fourth object store, no data in localStorage — both barred by
+invariant), so the guarantee splits in two: the repository half captures
+and returns; the interface half — binding on any surface that calls
+replace — downloads the returned backup before reporting success, with no
+dismissal path. A regretted replace is undone by another replace:
+`replaceDatabase(backup)` restores the old world byte for byte. Replace
+deliberately does not get prune's fresh-export precondition; its gate is
+stronger — it takes the export itself, every time.
+
+**Validation.** The same two boundary refusals as merge, via the shared
+`assertValidDump` guard: a `schemaVersion` mismatch, or a dump unit whose
+`configName` has no configuration record in the dump. Refusal happens
+before any capture or wipe and leaves the database, the store, and the
+dirty-since-export bit exactly as they were.
+
+**Atomicity.** The wipe and the load are ONE IndexedDB transaction across
+all three stores (`clearAndPutMany`): a crash leaves the old database or
+the new one, never half of each. A store with no incoming records is still
+cleared — replacing with an empty dump empties the database.
+
+**Settled edge — `dirtySinceExport` is true afterwards.** The bit means
+"*this repository's* export has run since the last mutation" — a claim the
+repository can verify about itself. The returned backup describes a
+database that no longer exists, and the incoming dump is a caller-supplied
+object the repository validated but never proved exists as a durable file
+on disk. So replace marks dirty, and prune refuses until a fresh export —
+at the cost of one export click.
+
+Replace changes no component contract: nothing points at units, and a
+selection left dangling by a replace already degrades to the empty state.
+Like export, import, and prune, replace is interface-only forever — the
+model never holds it (see Tool Calling & Data Safety).
+
 ## Configurations
 
 A **configuration** is a named recipe for producing one kind of artifact,
@@ -490,8 +550,10 @@ no bridge. That, plus selector subscriptions with the equality handling
 already done right, is what the ~1kb buys.
 
 **The wrapper is deliberately tiny.** Open-with-upgrade (three object
-stores), `getAll` per store at boot, single-document `put` per write, and
-`delete` by key for prune only. That's the entire surface — on the order of
+stores), `getAll` per store at boot, single-document `put` per write,
+`putMany` for the one crash-atomic pair, `clearAndPutMany` — clear all
+three stores and write a whole dump in one transaction — for replace only,
+and `delete` by key for prune only. That's the entire surface — on the order of
 a hundred lines around a promisified IDBRequest. Single-operation
 transactions also dodge IndexedDB's classic trap (a transaction
 auto-commits the moment you await anything that isn't an IDB request).
@@ -533,7 +595,7 @@ src/
 │   ├── extract.ts               # fence extractor: artifactType → lift code block
 │   └── merge.ts                 # import-merge, a pure function (the most test-worthy code)
 ├── persistence/
-│   ├── indexed-db-wrapper.ts    # open / getAll / put / putMany / deleteByKey
+│   ├── indexed-db-wrapper.ts    # open / getAll / put / putMany / clearAndPutMany / deleteByKey
 │   └── repository.ts            # implements VariorumRepository; the serial queue
 ├── state/
 │   ├── store.ts                 # the Zustand store + the dirty-since-export bit
@@ -642,7 +704,9 @@ Callable ONLY by the interface:
 
 - export variorum database
 - import variorum database
-- prune archived conversations (the only true delete in the system)
+- replace variorum database (wipe and load a dump wholesale; the pre-wipe
+  backup capture is mandatory)
+- prune archived conversations (one of the system's two true deletes)
 - restore archived conversations
 - create / edit (save a new version of) / archive configurations — see
   "Interface-only, on purpose" under Configurations for why the model never
@@ -659,13 +723,15 @@ conversation" is a cheap attack, and smaller local models are _more_
 susceptible to treating embedded text as instructions, not less. Mitigation is
 layered: `archive_conversation` requires human-in-the-loop confirmation before
 it executes, archiving is soft (recoverable) even if a bad call gets
-confirmed, and permanent deletion (prune) can't be invoked by the model at
-all. Gate stops the mistake, archive makes it cheap, prune stays out of reach.
+confirmed, and permanent deletion (prune, replace) can't be invoked by the
+model at all. Gate stops the mistake, archive makes it cheap, the true
+deletes stay out of reach.
 
 **Exfiltration.** Today the model is local, so tool results never leave the
 machine. But the day this points at a cloud provider, any tool result becomes
-part of an upstream request. That is why export/import are interface-only: the
-model can never trigger a "here's the whole database" response. So, if this
+part of an upstream request. That is why export/import/replace are
+interface-only: the model can never trigger a "here's the whole database"
+response. So, if this
 project is going to an external, frontier model (like ChatGPT or Anthropic),
 be aware that those models will be able to see tool results from your
 IndexedDB object store.
