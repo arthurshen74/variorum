@@ -19,3 +19,6 @@ dist-ssr
 design/chats/
 variorum-*.tgz
 .claude/settings.local.json
+# Playwright output
+test-results/
+playwright-report/
