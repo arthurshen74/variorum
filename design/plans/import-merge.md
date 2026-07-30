@@ -11,7 +11,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 - Write scope: src/domain/merge.ts
 - Tests: src/domain/merge.test.ts — filters: npx vitest run -t "[G1]"
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-07-30)
 
 ### G2 — importDatabase end to end
 - Intent: repository executes the plan; the two locked acceptance criteria.
