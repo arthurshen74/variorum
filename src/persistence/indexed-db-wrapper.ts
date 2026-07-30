@@ -4,10 +4,10 @@
  * `idb`, and no file in this repo may be mistakable for it.
  *
  * The entire surface: openDatabase / getAll / put / putMany / deleteByKey.
- * Single-operation transactions everywhere except putMany, which exists
- * for exactly one caller (createConfiguration) so a name record and its
- * version 1 land atomically. Do not grow this file without a reason of
- * that caliber.
+ * Single-operation transactions everywhere except putMany, which batches a
+ * whole plan into one transaction — createConfiguration's name record plus
+ * its version 1, importDatabase's merge plan. Do not grow this file without
+ * a reason of that caliber.
  */
 
 const DB_NAME = 'variorum';
@@ -75,6 +75,8 @@ export function putMany(
   db: IDBDatabase,
   writes: ReadonlyArray<{ store: StoreName; doc: unknown }>,
 ): Promise<void> {
+  // An empty write set is a no-op: IndexedDB rejects a zero-scope transaction.
+  if (writes.length === 0) return Promise.resolve();
   return new Promise((resolve, reject) => {
     const stores = [...new Set(writes.map((w) => w.store))];
     const tx = db.transaction(stores, 'readwrite');

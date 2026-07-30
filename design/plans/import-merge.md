@@ -18,7 +18,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 - Write scope: src/persistence/repository.ts, src/persistence/indexed-db-wrapper.ts (touch only if plan execution needs fixing)
 - Tests: src/persistence/repository.import.test.ts, e2e/import-merge.spec.ts — filters: npx vitest run -t "[G2]" / npx playwright test --grep "\[G2\]"
 - Depends on: G1
-- Status: RED
+- Status: GREEN (2026-07-30)
 
 ## Order
 
