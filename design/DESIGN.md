@@ -54,6 +54,47 @@ provides — "restore to revision 3" is a manual save of revision 3's
 content, minting a *new* revision, because history is append-only even when
 walking backward.
 
+## Theming
+
+The app renders in a light or dark theme. A device-level setting offers
+**auto | light | dark**, default **auto**: auto follows the browser's
+`prefers-color-scheme` and reacts live if it flips mid-session; light and
+dark override it. The preference persists in localStorage
+(`variorum.theme`), beside the API keys — it is a *device* preference, not
+user data. That placement makes two properties structural rather than
+enforced: it can never appear in an export (export dumps the IndexedDB
+database, which the theme never touches), and changing it never trips the
+dirty-since-export bit that gates prune.
+
+**Mechanism — one place, by decree.** Theming is a property, so it gets a
+single mechanism instead of per-feature handling. Every color in the app
+comes from the shadcn CSS-variable tokens in `src/index.css`, which
+already carries both a light (`:root`) and a dark (`.dark`) block. One
+module, `src/state/theme.ts`, owns resolution: it reads the persisted
+preference, subscribes to `matchMedia('(prefers-color-scheme: dark)')`
+while in auto, and toggles the `dark` class on `document.documentElement`.
+No other code ever writes that class. `main.tsx` initializes it before
+first render, so there is no light flash on a dark boot.
+
+**Out of the Zustand store, deliberately.** The store is the in-memory
+copy of the database, and the repository is its only writer; the theme has
+no database presence, so it stays out entirely. The settings control reads
+and writes through the theme module directly — the same pattern as the
+API-key fields and `transport.ts`.
+
+**The editor pane follows for free — almost.** Extensions may not import
+the store or receive a theme prop (the contract grows only on a second
+consumer's demand), so the theme reaches CodeMirror the same way it
+reaches everything else: CSS variables, which cascade into the extension's
+DOM ambiently. The code editor defines its `EditorView.theme` and syntax
+`HighlightStyle` in terms of `var(--…)` tokens — chrome from the existing
+shadcn tokens, plus a small `--editor-*` token set for syntax colors added
+to both blocks of `index.css`. `index.css` remains THE theming file;
+extensions stay import-clean.
+
+**Setting surface.** A compact three-way control (auto / light / dark) in
+the sidebar footer — a persistent low-stakes toggle, not a dialog.
+
 ## Server
 
 Server? Why Server? No server. Not for this. Keeping it simple. Persistence

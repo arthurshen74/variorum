@@ -3,9 +3,15 @@
  * selectors only; every action goes through the repository (or will, once
  * the dialogs land).
  */
+import { useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useVariorum } from '@/state/store';
 import { selectActiveUnits } from '@/state/selectors';
+import {
+  getThemePreference,
+  parseThemePreference,
+  setThemePreference,
+} from '@/state/theme';
 
 interface SidebarProps {
   activeUnitId: string | null;
@@ -16,6 +22,7 @@ export default function Sidebar({ activeUnitId, onSelectUnit }: SidebarProps) {
   // useShallow: the selector builds a new array; shallow-compare it so
   // React's snapshot stays stable (zustand v5 requirement for collections).
   const units = useVariorum(useShallow(selectActiveUnits));
+  const [theme, setTheme] = useState(getThemePreference);
 
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r bg-muted/30">
@@ -67,6 +74,28 @@ export default function Sidebar({ activeUnitId, onSelectUnit }: SidebarProps) {
         >
           ⚙ Configurations
         </button>
+        <div className="flex items-center justify-between px-2 py-1.5">
+          <label
+            htmlFor="theme-preference"
+            className="text-xs text-muted-foreground"
+          >
+            Theme
+          </label>
+          <select
+            id="theme-preference"
+            value={theme}
+            onChange={(event) => {
+              const preference = parseThemePreference(event.target.value);
+              setTheme(preference);
+              setThemePreference(preference);
+            }}
+            className="rounded-md border bg-background px-1.5 py-0.5 text-xs"
+          >
+            <option value="auto">Auto</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
       </div>
     </aside>
   );

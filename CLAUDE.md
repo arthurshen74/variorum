@@ -116,9 +116,11 @@ Data model:
 - Everything persists in ONE IndexedDB database, exactly three object
   stores: `configurations` (name records: description, artifactType,
   archived), `configurationVersions` (immutable recipes), `units`. Shapes
-  are declared in `design/application-schema.yaml`. The single exception:
-  API keys live in localStorage. Export is a full-database dump including
-  archived units and all configuration versions.
+  are declared in `design/application-schema.yaml`. The only exceptions:
+  API keys and the device theme preference live in localStorage (device
+  state — never in the Zustand store, never in an export). Export is a
+  full-database dump including archived units and all configuration
+  versions.
 - `artifactType` lives on the configuration _name_ record — set at
   creation, never edited. Version records contain no mutable fields at
   all; `archived` flags exist only on name records and units.

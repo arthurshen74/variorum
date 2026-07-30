@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App';
 import { repository } from '@/persistence/repository';
+import { initTheme } from '@/state/theme';
+
+initTheme();
 
 // Dev-console escape hatch until the configuration dialogs land: lets a
 // human drive the interface-only functions, e.g.

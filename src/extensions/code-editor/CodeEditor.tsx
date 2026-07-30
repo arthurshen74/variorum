@@ -6,7 +6,39 @@
 import { useEffect, useRef } from 'react';
 import { EditorView, basicSetup } from 'codemirror';
 import { yaml } from '@codemirror/lang-yaml';
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { tags } from '@lezer/highlight';
 import type { EditorProps } from '../extension';
+
+// Editor chrome from the shadcn tokens (DESIGN.md "Theming") — the CSS
+// variables cascade in ambiently, so the extension follows the active
+// theme without importing anything.
+const chromeTheme = EditorView.theme({
+  '&': {
+    backgroundColor: 'var(--background)',
+    color: 'var(--foreground)',
+  },
+  '.cm-gutters': {
+    backgroundColor: 'var(--muted)',
+    color: 'var(--muted-foreground)',
+    borderRight: '1px solid var(--border)',
+  },
+  '.cm-activeLine': { backgroundColor: 'var(--accent)' },
+  '.cm-activeLineGutter': { backgroundColor: 'var(--accent)' },
+  '.cm-cursor': { borderLeftColor: 'var(--foreground)' },
+  '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
+    backgroundColor: 'var(--accent)',
+  },
+});
+
+// Syntax colors from the --editor-* tokens (both blocks of index.css).
+const syntaxColors = HighlightStyle.define([
+  { tag: tags.keyword, color: 'var(--editor-keyword)' },
+  { tag: tags.propertyName, color: 'var(--editor-property)' },
+  { tag: tags.string, color: 'var(--editor-string)' },
+  { tag: [tags.number, tags.bool, tags.null], color: 'var(--editor-number)' },
+  { tag: tags.comment, color: 'var(--editor-comment)' },
+]);
 
 export default function CodeEditor({
   content,
@@ -41,6 +73,8 @@ export default function CodeEditor({
       parent: host,
       extensions: [
         basicSetup,
+        chromeTheme,
+        syntaxHighlighting(syntaxColors),
         ...languages,
         EditorView.editable.of(!readOnly),
         EditorView.updateListener.of((update) => {

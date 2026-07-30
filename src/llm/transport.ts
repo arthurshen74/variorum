@@ -1,8 +1,9 @@
 /**
  * The LLM transport (DESIGN.md "LLM Provider Interface"): an
  * OpenAI-compatible endpoint, LM Studio first, spoken to directly from the
- * browser. API key and base URL live in localStorage — the ONE exception
- * to everything-in-IndexedDB (DESIGN.md "API Keys"; XSS caveats apply).
+ * browser. API key and base URL live in localStorage, beside the theme
+ * preference — device state, outside everything-in-IndexedDB (DESIGN.md
+ * "API Keys"; XSS caveats apply).
  */
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 
