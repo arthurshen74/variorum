@@ -79,8 +79,15 @@ never restate. When asked to "document" something, route it:
   pitch itself changes. Never copy DESIGN.md content into it.
 - **`CLAUDE.md`** (this file) — instructions and hard invariants for coding
   agents. Update only when an invariant or convention is added or changed.
-- **`.claude/skills/tdd/SKILL.md`** — how new work gets done: the triage,
-  spec, and test-first gates. Update only when the workflow itself changes.
+- **`.claude/skills/tdd-plan-tests/SKILL.md`** — how new work gets specced
+  and tested: triage, spec, stubs, red tests, and the implementation
+  manifest (its format lives there). Update only when the workflow changes.
+- **`.claude/skills/tdd-implement/SKILL.md`** — how one manifest group gets
+  implemented: plan, worktree, ratchet, report. Update only when the
+  workflow changes.
+- **`design/plans/<feature>.md`** — per-feature implementation manifests
+  produced by the workflow. Mechanics only (groups, scopes, status); they
+  reference DESIGN.md and never restate it.
 
 If a documentation change seems to need the same information in two files,
 put the substance in DESIGN.md and a link in the other file.
@@ -153,16 +160,21 @@ LLM tool surface:
 
 ## Development workflow
 
-- All new capabilities and system-wide properties follow the TDD workflow
-  skill (`.claude/skills/tdd/SKILL.md`; the human invokes it as `/tdd`):
-  triage → spec gate → test-list gate → red → green. Its STOP GATES are
-  mandatory — never write implementation code before the test list is
-  approved.
+- All new capabilities and system-wide properties follow the two-skill TDD
+  workflow. `/tdd-plan-tests` (`.claude/skills/tdd-plan-tests/SKILL.md`)
+  produces the spec delta, interface stubs, red tests, and an
+  implementation manifest in `design/plans/`; `/tdd-implement`
+  (`.claude/skills/tdd-implement/SKILL.md`) implements exactly ONE manifest
+  group per run, in a git worktree. The human orchestrates: runs groups one
+  at a time, reviews, commits, merges. STOP GATES in both skills are
+  mandatory — a planning run never writes implementation code, and an
+  implementation run never starts before its plan is approved.
 - Definition of done:
   `npm run typecheck && npx vitest run && npx playwright test` — all green.
 - Tests are the spec. NEVER modify a test to make it pass in the same
-  session that implements the code under test; if a test looks wrong, stop
-  and ask the human.
+  session that implements the code under test. A locked test changes only
+  through a human-approved spec amendment (spec first, then the test),
+  recorded in the feature's manifest.
 - Harness: Vitest, node environment (fake-indexeddb for repository tests)
   for the inner loop; Playwright in real Chromium for acceptance — one spec
   per hard invariant touched. No jsdom tests for CSS or visual behavior.
