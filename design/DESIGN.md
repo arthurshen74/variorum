@@ -224,7 +224,8 @@ entire database, archived units and all configuration versions included. If it
 hasn't been pruned, it's in the export. Import is a merge; replace — wiping
 the database and loading a dump wholesale — is a deliberately separate
 operation with a mandatory pre-wipe backup. Both have their own sections
-below.
+below, and how a dump actually becomes a file on disk and back is "The Dump
+Is a File".
 
 ## Import Is a Merge
 
@@ -417,19 +418,26 @@ captures a full dump of the database as it stands and returns it — the
 backup IS the return value, unconditional, with no parameter to skip it.
 The repository cannot write files and has nowhere durable to stash the
 backup (no fourth object store, no data in localStorage — both barred by
-invariant), so the guarantee splits in two: the repository half captures
-and returns; the interface half — binding on any surface that calls
-replace — downloads the returned backup before reporting success, with no
-dismissal path. A regretted replace is undone by another replace:
-`replaceDatabase(backup)` restores the old world byte for byte. Replace
-deliberately does not get prune's fresh-export precondition; its gate is
-stronger — it takes the export itself, every time.
+invariant), so it cannot complete the guarantee alone. It does not merely
+hope the caller will: `replaceDatabase(dump, deliverBackup)` takes the
+delivery as an argument and **awaits it before the wipe**. Capture,
+deliver, and only then destroy. If delivery rejects, the method propagates
+and touches nothing — no wipe, no store write, no dirty bit — so a failed
+backup is indistinguishable from a refused replace. The obligation is a
+parameter rather than a convention because "binding on every caller" is
+not a property prose can hold; a second call site would simply forget.
+A regretted replace is undone by another replace: `replaceDatabase(backup,
+deliver)` restores the old world byte for byte. Replace deliberately does
+not get prune's fresh-export precondition; its gate is stronger — it takes
+the export itself, every time.
 
 **Validation.** The same two boundary refusals as merge, via the shared
 `assertValidDump` guard: a `schemaVersion` mismatch, or a dump unit whose
 `configName` has no configuration record in the dump. Refusal happens
 before any capture or wipe and leaves the database, the store, and the
-dirty-since-export bit exactly as they were.
+dirty-since-export bit exactly as they were. When the dump arrived as a
+file, it cleared a structural gate before ever reaching here — see "The
+Dump Is a File".
 
 **Atomicity.** The wipe and the load are ONE IndexedDB transaction across
 all three stores (`clearAndPutMany`): a crash leaves the old database or
@@ -448,6 +456,93 @@ Replace changes no component contract: nothing points at units, and a
 selection left dangling by a replace already degrades to the empty state.
 Like export, import, and prune, replace is interface-only forever — the
 model never holds it (see Tool Calling & Data Safety).
+
+## The Dump Is a File
+
+Export, import, and replace all trade `DatabaseDump` objects at the
+repository boundary. This section is the other half: how that object
+becomes a file on disk and back. It is a separate half because the
+repository writes no files and never will — the object is the contract, and
+everything here happens above it.
+
+**Serialization.** `JSON.stringify(dump, null, 2)`, MIME
+`application/json`. Pretty-printed deliberately: a backup is something a
+human opens, diffs against another backup, and occasionally reads to answer
+"is that conversation actually in here?". The cost is file size, and the
+whole database is megabytes.
+
+**The envelope does not grow.** `schemaVersion` plus the three collections,
+exactly as `application-schema.yaml` has it — "three collections; nothing
+else". No `exportedAt`, no application version, no checksum. A field no
+code reads is a field that rots, and nothing in the merge may consult a
+wall clock anyway. The export's timestamp lives in its filename.
+
+**Filenames.** `variorum-YYYY-MM-DD-HHMM.json` for an export;
+`variorum-pre-replace-YYYY-MM-DD-HHMM.json` for the backup that replace
+captures. Deliberately different words, because the rescue file has to be
+identifiable at a glance in a Downloads folder full of ordinary exports, by
+someone who is already having a bad day.
+
+**Two egress mechanisms, and why it isn't one.** `showSaveFilePicker` is
+the better experience — the user chooses where the file lands — but it has
+a Cancel button, and a cancellable backup is not a mandatory backup. So the
+paths split on whether cancellation is survivable:
+
+- **Ordinary export** uses the picker, falling back to `<a download>` where
+  the API is absent (Firefox). Cancelling costs nothing: the export simply
+  did not happen.
+- **The replace backup** uses `<a download>` and `URL.createObjectURL`,
+  always. The browser accepts the blob or the call throws. There is no
+  dialog, and so nothing for the user to dismiss.
+
+Two mechanisms is the price of the invariant. One would mean either a
+backup the user can wave away, or an export that re-prompts in a loop the
+user cannot escape.
+
+**Export delivers before it clears the dirty bit.** `exportDatabase(deliver)`
+awaits delivery and only then clears `dirtySinceExport`. The bit means "a
+dump of this database reached the user" — clearing it on a cancelled save
+would make prune's gate a lie, and prune is a true delete. Cancel the
+picker and the bit stays set, so prune keeps refusing. Same shape as
+replace's delivery argument, for the same reason: the guarantee belongs in
+a signature, not in a habit.
+
+**Settled edge — delivery means initiated, not durable.** The anchor path
+has no completion signal: `deliverBackup` resolving means the browser
+accepted the blob, not that bytes are on disk. The picker path *does* give
+a real one (`await writable.close()`). So the more critical path carries
+the weaker signal, which is worth stating plainly rather than pretending
+otherwise. It is still the right trade: between a backup that might not
+have finished flushing and a backup the user can cancel outright, the
+second is the worse failure, and only the first is recoverable by trying
+again.
+
+**Ingress.** `<input type="file" accept="application/json">`. One
+mechanism, no picker variant, no drag-drop. Nothing rides on import
+ingress the way the invariant rides on backup egress — import is a merge,
+it deletes nothing, and a dismissed file chooser is a no-op.
+
+**The parse gate.** A file parse is a boundary, so text off disk is
+validated in full before it reaches the repository: `JSON.parse`, then
+every field of every record checked against the shapes in
+`application-schema.yaml` — the envelope, configurations, versions, units,
+and the messages and artifacts nested inside them. Failures name their path
+(`units[3].artifacts[0].savedAt`), because a rejected backup is useless if
+the user cannot tell which record spoiled it.
+
+The gate is separate from `assertValidDump`, and runs first. That guard
+enforces *meaning* — schema version, referential integrity — for every
+caller including the in-memory ones that never touched a file, and it
+trusts that its argument is shaped like a `DatabaseDump`. The parse gate is
+what earns that trust. Structure first, then meaning.
+
+**The validator is hand-written, and that is a standing cost.** No
+schema-validation library. The consequence is that record shapes in
+`application-schema.yaml` are not mechanically coupled to the code that
+checks them, and TypeScript will not close the gap either: the validator's
+job is to narrow `unknown` down to `DatabaseDump`, so a newly added field
+goes unchecked rather than failing to compile. Changing the schema means
+changing the validator, by hand, on purpose.
 
 ## Configurations
 
@@ -593,7 +688,8 @@ src/
 ├── domain/                      # pure TS, zero React, zero IO
 │   ├── types.ts                 # runtime types mirroring application-schema.yaml
 │   ├── extract.ts               # fence extractor: artifactType → lift code block
-│   └── merge.ts                 # import-merge, a pure function (the most test-worthy code)
+│   ├── merge.ts                 # import-merge, a pure function (the most test-worthy code)
+│   └── dump-file.ts             # serialize / parse+validate a dump — text in, text out, no IO
 ├── persistence/
 │   ├── indexed-db-wrapper.ts    # open / getAll / put / putMany / clearAndPutMany / deleteByKey
 │   └── repository.ts            # implements VariorumRepository; the serial queue
@@ -615,6 +711,7 @@ src/
     ├── artifact/                # ArtifactPane (tabs, working copy, Save), RevisionHistory
     ├── chat/                    # messages, reasoning (CoT), loaders, tool confirmations
     └── dialogs/                 # Configuration, Export/Import, Prune, ArchiveConfirm
+        └── file-io.ts           # THE only file touching Blob / anchor / picker / input[type=file]
 ```
 
 Two enforcement tricks worth their weight:

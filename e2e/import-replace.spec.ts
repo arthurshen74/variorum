@@ -38,8 +38,11 @@ interface DevRepository {
     conversationName: string,
     configName: string,
   ): Promise<{ id: string }>;
-  exportDatabase(): Promise<Dump>;
-  replaceDatabase(dump: Dump): Promise<Dump>;
+  exportDatabase(deliver: (dump: Dump) => Promise<void>): Promise<Dump>;
+  replaceDatabase(
+    dump: Dump,
+    deliverBackup: (backup: Dump) => Promise<void>,
+  ): Promise<Dump>;
 }
 
 type DevWindow = { variorum: { repository: DevRepository } };
@@ -57,7 +60,7 @@ test('[G2] replace wipes wholesale, returns the pre-wipe backup, and the backup 
       { modelName: 'test-model', systemPrompt: 'v1' },
     );
     await repository.createUnit('own thread', 'linkml');
-    const worldA = await repository.exportDatabase();
+    const worldA = await repository.exportDatabase(async () => {});
     const dumpB: Dump = {
       schemaVersion: worldA.schemaVersion,
       configurations: [
@@ -73,10 +76,10 @@ test('[G2] replace wipes wholesale, returns the pre-wipe backup, and the backup 
       ],
       units: [],
     };
-    const backup = await repository.replaceDatabase(dumpB);
-    const afterReplace = await repository.exportDatabase();
-    await repository.replaceDatabase(backup);
-    const afterUndo = await repository.exportDatabase();
+    const backup = await repository.replaceDatabase(dumpB, async () => {});
+    const afterReplace = await repository.exportDatabase(async () => {});
+    await repository.replaceDatabase(backup, async () => {});
+    const afterUndo = await repository.exportDatabase(async () => {});
     return { worldA, dumpB, backup, afterReplace, afterUndo };
   });
 
@@ -96,7 +99,7 @@ test('[G2] a replaced database survives reload', async ({ page }) => {
       { modelName: 'test-model', systemPrompt: 'v1' },
     );
     await repository.createUnit('doomed thread', 'doomed');
-    const dump = await repository.exportDatabase();
+    const dump = await repository.exportDatabase(async () => {});
     const fresh: Dump = {
       schemaVersion: dump.schemaVersion,
       configurations: [{ name: 'fresh', artifactType: 'yaml', archived: false }],
@@ -120,7 +123,7 @@ test('[G2] a replaced database survives reload', async ({ page }) => {
         },
       ],
     };
-    await repository.replaceDatabase(fresh);
+    await repository.replaceDatabase(fresh, async () => {});
   });
 
   await page.reload();
@@ -128,7 +131,7 @@ test('[G2] a replaced database survives reload', async ({ page }) => {
 
   const after = await page.evaluate(async () => {
     const { repository } = (window as unknown as DevWindow).variorum;
-    return repository.exportDatabase();
+    return repository.exportDatabase(async () => {});
   });
 
   expect(after.configurations.map((c) => c.name)).toEqual(['fresh']);

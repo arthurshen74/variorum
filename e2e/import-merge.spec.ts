@@ -39,7 +39,7 @@ interface DevRepository {
     draft: { modelName: string; systemPrompt: string },
   ): Promise<unknown>;
   createUnit(conversationName: string, configName: string): Promise<{ id: string }>;
-  exportDatabase(): Promise<Dump>;
+  exportDatabase(deliver: (dump: Dump) => Promise<void>): Promise<Dump>;
   importDatabase(dump: Dump): Promise<Report>;
 }
 
@@ -58,9 +58,9 @@ test('[G2] importing your own export changes nothing and reports everything skip
       { modelName: 'test-model', systemPrompt: 'v1' },
     );
     await repository.createUnit('own thread', 'linkml');
-    const before = await repository.exportDatabase();
+    const before = await repository.exportDatabase(async () => {});
     const report = await repository.importDatabase(before);
-    const after = await repository.exportDatabase();
+    const after = await repository.exportDatabase(async () => {});
     return { before, report, after };
   });
 
@@ -85,7 +85,7 @@ test('[G2] a merged database survives reload', async ({ page }) => {
       { modelName: 'test-model', systemPrompt: 'v1' },
     );
     await repository.createUnit('own thread', 'linkml');
-    const dump = await repository.exportDatabase();
+    const dump = await repository.exportDatabase(async () => {});
     // the "other machine": shares v1, then saved a DIFFERENT v2
     await repository.saveConfigurationVersion('linkml', {
       modelName: 'test-model',
@@ -108,7 +108,7 @@ test('[G2] a merged database survives reload', async ({ page }) => {
 
   const after = await page.evaluate(async () => {
     const { repository } = (window as unknown as DevWindow).variorum;
-    return repository.exportDatabase();
+    return repository.exportDatabase(async () => {});
   });
 
   expect(after.configurations.map((c) => c.name).sort()).toEqual([

@@ -270,8 +270,15 @@ export interface VariorumRepository {
   // ---- Danger zone ------------------------------------------------------
   // Interface-only. The model can never trigger any of these.
 
-  /** Full-database dump: archived units, all versions, everything. */
-  exportDatabase(): Promise<DatabaseDump>;
+  /**
+   * Full-database dump: archived units, all versions, everything.
+   * `deliver` puts it somewhere durable and is AWAITED before
+   * dirtySinceExport clears — a cancelled save leaves the bit set, so
+   * prune keeps refusing (DESIGN.md "The Dump Is a File").
+   */
+  exportDatabase(
+    deliver: (dump: DatabaseDump) => Promise<void>,
+  ): Promise<DatabaseDump>;
 
   /**
    * A MERGE, never a replace (decided; DESIGN.md "Import Is a Merge").
@@ -302,10 +309,15 @@ export interface VariorumRepository {
    * guards as import: schemaVersion mismatch, unit referencing a
    * configuration absent from the dump) BEFORE any capture or wipe,
    * leaving database, store, and dirty bit untouched. Captures a full
-   * pre-wipe backup and returns it — unconditionally, no way to skip;
-   * the calling dialog downloads it before reporting success. A
+   * pre-wipe backup and returns it — unconditionally, no way to skip —
+   * and AWAITS deliverBackup before the wipe: capture, deliver, then
+   * destroy. A rejected delivery propagates and touches nothing. A
    * regretted replace is undone by another replace:
-   * replaceDatabase(backup) restores exactly. Marks dirtySinceExport.
+   * replaceDatabase(backup, deliver) restores exactly. Marks
+   * dirtySinceExport.
    */
-  replaceDatabase(dump: DatabaseDump): Promise<DatabaseDump>;
+  replaceDatabase(
+    dump: DatabaseDump,
+    deliverBackup: (backup: DatabaseDump) => Promise<void>,
+  ): Promise<DatabaseDump>;
 }

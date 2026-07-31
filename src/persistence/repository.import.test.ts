@@ -13,6 +13,8 @@ import { SCHEMA_VERSION } from '@/domain/types';
 
 const T = '2026-01-01T00:00:00.000Z';
 
+const deliveryOk = async (): Promise<void> => {};
+
 /** A dump holding one single-version lineage and optionally one unit. */
 const dumpWith = (configName: string, unitId?: string): DatabaseDump => ({
   schemaVersion: SCHEMA_VERSION,
@@ -61,7 +63,7 @@ describe('[G2] importDatabase', () => {
       { modelName: 'm', systemPrompt: 's' },
     );
     await repository.createUnit('own conversation', 'own-cfg');
-    const dump = await repository.exportDatabase();
+    const dump = await repository.exportDatabase(deliveryOk);
     const before = variorumStore.getState();
     const report = await repository.importDatabase(dump);
     const after = variorumStore.getState();
@@ -80,7 +82,7 @@ describe('[G2] importDatabase', () => {
   });
 
   it('marks dirtySinceExport so prune refuses until a fresh export', async () => {
-    await repository.exportDatabase();
+    await repository.exportDatabase(deliveryOk);
     await repository.importDatabase(dumpWith('dirty-cfg'));
     expect(variorumStore.getState().dirtySinceExport).toBe(true);
     await expect(repository.pruneArchivedUnits()).rejects.toThrow(/export/);

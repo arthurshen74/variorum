@@ -123,12 +123,16 @@ Data model:
 - Deletion is **soft** everywhere (archived flag). The system's ONLY true
   deletes are two interface-only operations. Prune deletes archived units
   only, never configurations, and REQUIRES a fresh export: the repository
-  refuses unless an export has happened since the last mutation. Replace
-  (`replaceDatabase`) wipes the whole database and loads a dump wholesale
-  in one atomic transaction; it MUST capture and return a full pre-wipe
-  backup before any byte is deleted, and any UI invoking it downloads that
-  backup unconditionally before reporting success — its undo is another
-  replace.
+  refuses unless an export has happened since the last mutation.
+  `exportDatabase` takes a delivery callback and clears that bit only
+  AFTER the callback resolves — a cancelled save leaves prune refusing.
+  Replace (`replaceDatabase`) wipes the whole database and loads a dump
+  wholesale in one atomic transaction; it MUST capture a full pre-wipe
+  backup and AWAIT its delivery callback BEFORE the first byte is
+  deleted. A rejected delivery touches nothing — no wipe, no store write,
+  no dirty bit. The backup is also the return value; its undo is another
+  replace. Delivery is a parameter, never a convention: a caller that
+  cannot be made to pass one is a caller that will forget.
 - `importDatabase` is a MERGE, never a replace. It never overwrites,
   renumbers, or deletes: identical records are skipped, strict prefixes
   fast-forward, and diverged histories are kept BOTH (fresh uuid for units;
@@ -215,6 +219,11 @@ LLM tool surface:
   is the ONLY importer of `indexed-db-wrapper.ts`, and it declares
   `implements VariorumRepository` imported from `design/repository-api.ts`
   — never redeclare that interface locally.
+- File IO — `Blob`, `URL.createObjectURL`, anchor `download`,
+  `showSaveFilePicker`, `input[type=file]` — lives ONLY in
+  `src/components/dialogs/file-io.ts`. The domain and the repository never
+  see a `File`: they trade `DatabaseDump` objects and strings. Dump text is
+  produced and parsed in `src/domain/dump-file.ts`, which does no IO.
 - Never name a file `idb` — an npm library has that name; the wrapper is
   `indexed-db-wrapper.ts`.
 - Extensions (`src/extensions/`, see DESIGN.md "Extensions"): an extension
