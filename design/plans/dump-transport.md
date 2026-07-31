@@ -18,7 +18,7 @@ primitive in package.json, so building them is also a dependency decision.
 - Tests: `src/domain/dump-file.test.ts` — filter:
   `npx vitest run src/domain/dump-file.test.ts`
 - Depends on: none
-- Status: RED (72 failing)
+- Status: GREEN (2026-07-31)
 
 ### G2 — delivery before destruction
 - Intent: both danger-zone methods await their deliverer before the
@@ -72,3 +72,10 @@ above are the precise ones.
 mechanically (17 in `repository.replace.test.ts`, 2 in
 `repository.import.test.ts`, 1 in `repository.test.ts`, plus both existing e2e
 specs). No assertion in any locked test was changed — only the argument lists.
+
+2026-07-31 — `dump-file.test.ts` "strips unknown keys from the envelope": the
+expected literal was not in sorted order, so `Object.keys(parsed).sort()` could
+never equal it (`V` precedes `s`, so `configurationVersions` sorts before
+`configurations`). Both sides now sort. No spec delta — DESIGN.md "The envelope
+does not grow" already states what the test locks, and the assertion's meaning,
+exactly four envelope keys and no more, is unchanged.

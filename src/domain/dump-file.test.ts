@@ -419,12 +419,13 @@ describe('[G1] parseDump — boundary discipline', () => {
 
   it('strips unknown keys from the envelope', () => {
     const parsed = parseDump(dumpText({ exportedAt: T }));
-    expect(Object.keys(parsed).sort()).toEqual([
+    const envelopeKeys = [
       'configurations',
       'configurationVersions',
       'schemaVersion',
       'units',
-    ]);
+    ];
+    expect(Object.keys(parsed).sort()).toEqual(envelopeKeys.sort());
   });
 
   it('strips unknown keys from nested messages and artifacts', () => {
