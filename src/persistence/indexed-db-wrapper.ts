@@ -99,10 +99,23 @@ export function putMany(
  * cleared, so an empty write set is NOT a no-op (unlike putMany).
  */
 export function clearAndPutMany(
-  _db: IDBDatabase,
-  _writes: ReadonlyArray<{ store: StoreName; doc: unknown }>,
+  db: IDBDatabase,
+  writes: ReadonlyArray<{ store: StoreName; doc: unknown }>,
 ): Promise<void> {
-  throw new Error('not implemented: clearAndPutMany');
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction([...STORE_NAMES], 'readwrite');
+    tx.oncomplete = () => resolve();
+    tx.onerror = () =>
+      reject(tx.error ?? new Error('IndexedDB transaction failed'));
+    tx.onabort = () =>
+      reject(tx.error ?? new Error('IndexedDB transaction aborted'));
+    for (const store of STORE_NAMES) {
+      tx.objectStore(store).clear();
+    }
+    for (const { store, doc } of writes) {
+      tx.objectStore(store).put(doc);
+    }
+  });
 }
 
 export function deleteByKey(

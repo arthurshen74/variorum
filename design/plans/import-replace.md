@@ -31,7 +31,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
   npx vitest run src/persistence/repository.replace.test.ts /
   npx playwright test import-replace.spec.ts
 - Depends on: G1
-- Status: RED
+- Status: GREEN (2026-07-30)
 
 ## Order
 

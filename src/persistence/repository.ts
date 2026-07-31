@@ -22,8 +22,9 @@ import type {
   VariorumRepository,
 } from '@design/repository-api';
 import { SCHEMA_VERSION } from '@/domain/types';
-import { planMerge } from '@/domain/merge';
+import { assertValidDump, planMerge } from '@/domain/merge';
 import {
+  clearAndPutMany,
   deleteByKey,
   getAll,
   openDatabase,
@@ -80,6 +81,17 @@ class Repository implements VariorumRepository {
       throw new Error(`configuration has no versions: ${name}`);
     }
     return latest;
+  }
+
+  /** The store as a dump: what export returns, what merge compares against. */
+  private snapshot(): DatabaseDump {
+    const s = variorumStore.getState();
+    return {
+      schemaVersion: SCHEMA_VERSION,
+      configurations: s.configurations,
+      configurationVersions: s.configurationVersions,
+      units: s.units,
+    };
   }
 
   private async writeUnit(next: Unit): Promise<Unit> {
@@ -355,13 +367,7 @@ class Repository implements VariorumRepository {
 
   exportDatabase(): Promise<DatabaseDump> {
     return this.enqueue(async () => {
-      const s = variorumStore.getState();
-      const dump: DatabaseDump = {
-        schemaVersion: SCHEMA_VERSION,
-        configurations: s.configurations,
-        configurationVersions: s.configurationVersions,
-        units: s.units,
-      };
+      const dump = this.snapshot();
       variorumStore.setState({ dirtySinceExport: false });
       return dump;
     });
@@ -369,14 +375,7 @@ class Repository implements VariorumRepository {
 
   importDatabase(dump: DatabaseDump): Promise<ImportReport> {
     return this.enqueue(async () => {
-      const s = variorumStore.getState();
-      const local: DatabaseDump = {
-        schemaVersion: SCHEMA_VERSION,
-        configurations: s.configurations,
-        configurationVersions: s.configurationVersions,
-        units: s.units,
-      };
-      const plan = planMerge(local, dump, () => crypto.randomUUID());
+      const plan = planMerge(this.snapshot(), dump, () => crypto.randomUUID());
       await putMany(this.requireDb(), [
         ...plan.configurations.map((doc) => ({
           store: 'configurations' as const,
@@ -429,8 +428,32 @@ class Repository implements VariorumRepository {
     });
   }
 
-  replaceDatabase(_dump: DatabaseDump): Promise<DatabaseDump> {
-    throw new Error('not implemented: replaceDatabase');
+  replaceDatabase(dump: DatabaseDump): Promise<DatabaseDump> {
+    return this.enqueue(async () => {
+      // Refuse before capturing or wiping anything.
+      assertValidDump(SCHEMA_VERSION, dump);
+      const backup = this.snapshot();
+      await clearAndPutMany(this.requireDb(), [
+        ...dump.configurations.map((doc) => ({
+          store: 'configurations' as const,
+          doc,
+        })),
+        ...dump.configurationVersions.map((doc) => ({
+          store: 'configurationVersions' as const,
+          doc,
+        })),
+        ...dump.units.map((doc) => ({ store: 'units' as const, doc })),
+      ]);
+      // Copies: the dump is caller-supplied, and a later mutation of it must
+      // not reach into store state.
+      variorumStore.setState({
+        configurations: [...dump.configurations],
+        configurationVersions: [...dump.configurationVersions],
+        units: [...dump.units],
+        dirtySinceExport: true,
+      });
+      return backup;
+    });
   }
 }
 
