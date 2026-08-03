@@ -1,12 +1,16 @@
 /**
  * Left sidebar: active units, configuration entry point. Reads through
- * selectors only; every action goes through the repository (or will, once
- * the dialogs land).
+ * selectors only; the dialogs the buttons open are owned by AppShell.
  */
 import { useState } from 'react';
+import { ArchiveIcon } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
+import type { Unit } from '@/domain/types';
+import {
+  selectActiveConfigurations,
+  selectActiveUnits,
+} from '@/state/selectors';
 import { useVariorum } from '@/state/store';
-import { selectActiveUnits } from '@/state/selectors';
 import {
   getThemePreference,
   parseThemePreference,
@@ -16,12 +20,25 @@ import {
 interface SidebarProps {
   activeUnitId: string | null;
   onSelectUnit: (unitId: string) => void;
+  onOpenConfigurations: () => void;
+  onNewUnit: () => void;
+  onArchiveUnit: (unit: Unit) => void;
 }
 
-export default function Sidebar({ activeUnitId, onSelectUnit }: SidebarProps) {
+const NO_CONFIGURATIONS_HINT =
+  'Create a configuration first — a unit is bound to one at creation';
+
+export default function Sidebar({
+  activeUnitId,
+  onSelectUnit,
+  onOpenConfigurations,
+  onNewUnit,
+  onArchiveUnit,
+}: SidebarProps) {
   // useShallow: the selector builds a new array; shallow-compare it so
   // React's snapshot stays stable (zustand v5 requirement for collections).
   const units = useVariorum(useShallow(selectActiveUnits));
+  const configurations = useVariorum(useShallow(selectActiveConfigurations));
   const [theme, setTheme] = useState(getThemePreference);
 
   return (
@@ -32,9 +49,13 @@ export default function Sidebar({ activeUnitId, onSelectUnit }: SidebarProps) {
         </span>
         <button
           type="button"
-          disabled
-          title="Arrives with the configuration dialog"
-          className="rounded-md px-2 py-0.5 text-sm text-muted-foreground opacity-50"
+          aria-label="New unit"
+          disabled={configurations.length === 0}
+          title={
+            configurations.length === 0 ? NO_CONFIGURATIONS_HINT : 'New unit'
+          }
+          onClick={onNewUnit}
+          className="rounded-md px-2 py-0.5 text-sm enabled:hover:bg-accent disabled:text-muted-foreground disabled:opacity-50"
         >
           +
         </button>
@@ -47,11 +68,11 @@ export default function Sidebar({ activeUnitId, onSelectUnit }: SidebarProps) {
         ) : (
           <ul className="space-y-1">
             {units.map((unit) => (
-              <li key={unit.id}>
+              <li key={unit.id} className="flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => onSelectUnit(unit.id)}
-                  className={`w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent ${
+                  className={`min-w-0 flex-1 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent ${
                     unit.id === activeUnitId ? 'bg-accent font-medium' : ''
                   }`}
                 >
@@ -59,6 +80,14 @@ export default function Sidebar({ activeUnitId, onSelectUnit }: SidebarProps) {
                   <span className="block truncate text-xs text-muted-foreground">
                     {unit.configName}
                   </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onArchiveUnit(unit)}
+                  className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <ArchiveIcon aria-hidden="true" className="size-3.5" />
+                  <span className="sr-only">Archive</span>
                 </button>
               </li>
             ))}
@@ -68,11 +97,10 @@ export default function Sidebar({ activeUnitId, onSelectUnit }: SidebarProps) {
       <div className="border-t p-2">
         <button
           type="button"
-          disabled
-          title="Configuration dialog arrives next"
-          className="w-full rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground opacity-50"
+          onClick={onOpenConfigurations}
+          className="w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
         >
-          ⚙ Configurations
+          Configurations
         </button>
         <div className="flex items-center justify-between px-2 py-1.5">
           <label
