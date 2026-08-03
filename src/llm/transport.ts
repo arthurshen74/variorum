@@ -21,14 +21,29 @@ export function setBaseUrl(url: string): void {
   localStorage.setItem(BASE_URL_KEY, url);
 }
 
+const ALLOWED_PROTOCOLS = ['http:', 'https:'];
+
 /** Boundary validation: trimmed, parseable, http(s)-schemed URL — or null. */
-export function parseBaseUrl(_input: string): string | null {
-  throw new Error('not implemented: parseBaseUrl');
+export function parseBaseUrl(input: string): string | null {
+  const trimmed = input.trim();
+  if (trimmed === '') return null;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return null;
+  }
+  if (!ALLOWED_PROTOCOLS.includes(parsed.protocol)) return null;
+
+  // The trimmed input, not parsed.href: normalization would append a
+  // trailing slash and the Endpoint field would change under the user.
+  return trimmed;
 }
 
 /** Reset: remove the stored value so the default shows through. */
 export function clearBaseUrl(): void {
-  throw new Error('not implemented: clearBaseUrl');
+  localStorage.removeItem(BASE_URL_KEY);
 }
 
 export function getApiKey(): string | null {

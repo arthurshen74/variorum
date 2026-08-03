@@ -29,7 +29,7 @@ approval.
 - Write scope: src/llm/transport.ts
 - Tests: src/llm/transport.test.ts — filter: npx vitest run -t "[G3]"
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-08-03)
 
 ### G2 — dialogs and shell wiring
 - Intent: ConfigurationsDialog (List/Add/Edit/Endpoint), NewUnitDialog,
