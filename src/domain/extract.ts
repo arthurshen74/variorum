@@ -13,13 +13,7 @@ export function extractArtifact(
   responseText: string,
   artifactType: string,
 ): string | null {
-  const escaped = artifactType.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const fence = new RegExp('```' + escaped + '[^\\n]*\\n([\\s\\S]*?)```', 'g');
-  let last: string | null = null;
-  for (const match of responseText.matchAll(fence)) {
-    last = match[1] ?? null;
-  }
-  return last;
+  return partitionResponse(responseText, artifactType).artifact;
 }
 
 /**
@@ -40,7 +34,18 @@ export function partitionResponse(
   responseText: string,
   artifactType: string,
 ): PartitionedResponse {
-  void responseText;
-  void artifactType;
-  throw new Error('not implemented: partitionResponse');
+  const escaped = artifactType.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const fence = new RegExp('```' + escaped + '[^\\n]*\\n([\\s\\S]*?)```', 'g');
+  let last: RegExpExecArray | null = null;
+  for (const match of responseText.matchAll(fence)) {
+    last = match;
+  }
+  if (last === null) {
+    return { before: responseText, artifact: null, after: '' };
+  }
+  return {
+    before: responseText.slice(0, last.index),
+    artifact: last[1] ?? null,
+    after: responseText.slice(last.index + last[0].length),
+  };
 }

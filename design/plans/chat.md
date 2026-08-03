@@ -11,7 +11,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 - Write scope: src/domain/extract.ts, src/domain/dump-file.ts
 - Tests: src/domain/extract.test.ts, src/domain/dump-file.reasoning.test.ts, src/domain/merge.reasoning.test.ts — filters: npx vitest run -t "[G1]"
 - Depends on: none
-- Status: RED (11 red; 4 green-at-birth locks: merge byte-equality ×3, reasoning-optional compat — merge.ts already compares field-generically and needs no change)
+- Status: GREEN (2026-08-03)
 
 ### G2 — repository
 - Intent: completeExchange persists reasoning. (The unchanged-artifact comparison already exists; its tests are locks.)

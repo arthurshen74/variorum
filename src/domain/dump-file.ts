@@ -141,12 +141,14 @@ function parseUnit(value: unknown, path: string): Unit {
 function parseMessage(value: unknown, path: string): Message {
   const record = objectAt(value, path);
   const receivedFinishedAt = optionalString(record, 'receivedFinishedAt', path);
+  const reasoning = optionalString(record, 'reasoning', path);
   return {
     role: requiredEnum(record, 'role', MESSAGE_ROLES, path),
     configVersion: requiredInteger(record, 'configVersion', path),
     sentAt: requiredString(record, 'sentAt', path),
     content: requiredString(record, 'content', path),
     ...(receivedFinishedAt !== undefined && { receivedFinishedAt }),
+    ...(reasoning !== undefined && { reasoning }),
   };
 }
 
