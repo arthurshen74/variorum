@@ -16,10 +16,14 @@ import {
 import { Slider } from '@/components/ui/slider';
 import type { Configuration } from '@/domain/types';
 import {
+  clearApiKey,
   clearBaseUrl,
   DEFAULT_BASE_URL,
+  getApiKey,
   getBaseUrl,
+  normalizeApiKey,
   parseBaseUrl,
+  setApiKey,
   setBaseUrl,
 } from '@/llm/transport';
 import { repository } from '@/persistence/repository';
@@ -86,6 +90,7 @@ export default function ConfigurationsDialog({
   const [errors, setErrors] = useState<FieldErrors>({});
   const [alert, setAlert] = useState<string | null>(null);
   const [endpointUrl, setEndpointUrl] = useState('');
+  const [endpointKey, setEndpointKey] = useState('');
 
   const active = configurations.filter((c) => !c.archived);
   const archived = configurations.filter((c) => c.archived);
@@ -120,6 +125,7 @@ export default function ConfigurationsDialog({
 
   function showEndpoint() {
     setEndpointUrl(getBaseUrl());
+    setEndpointKey(getApiKey() ?? '');
     setAlert(null);
     setView({ kind: 'endpoint' });
   }
@@ -188,6 +194,11 @@ export default function ConfigurationsDialog({
       return;
     }
     setBaseUrl(url);
+
+    const key = normalizeApiKey(endpointKey);
+    if (key === null) clearApiKey();
+    else setApiKey(key);
+
     setAlert(null);
   }
 
@@ -469,6 +480,22 @@ export default function ConfigurationsDialog({
                 value={endpointUrl}
                 onChange={(event) => setEndpointUrl(event.target.value)}
               />
+            </div>
+            <div className="grid gap-1">
+              <label htmlFor="api-key" className={LABEL_CLASS}>
+                API key
+              </label>
+              <input
+                id="api-key"
+                type="password"
+                className={INPUT_CLASS}
+                value={endpointKey}
+                onChange={(event) => setEndpointKey(event.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty for servers that need no key, such as LM Studio.
+                Saving an empty field removes the stored key.
+              </p>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={showList}>

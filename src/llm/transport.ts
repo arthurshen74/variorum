@@ -55,13 +55,14 @@ export function setApiKey(key: string): void {
 }
 
 /** Boundary normalization: the trimmed key, or null when empty/whitespace-only. */
-export function normalizeApiKey(_input: string): string | null {
-  throw new Error('not implemented: normalizeApiKey');
+export function normalizeApiKey(input: string): string | null {
+  const trimmed = input.trim();
+  return trimmed === '' ? null : trimmed;
 }
 
 /** Unset: remove the stored key so requests carry no Authorization header. */
 export function clearApiKey(): void {
-  throw new Error('not implemented: clearApiKey');
+  localStorage.removeItem(API_KEY_KEY);
 }
 
 /**
@@ -70,10 +71,13 @@ export function clearApiKey(): void {
  * here (CLAUDE.md: never hardcode them).
  */
 export function createProvider(fetchImpl?: typeof fetch) {
+  // No key stored means no apiKey option, and so no Authorization header —
+  // an endpoint that wants one should answer with its own auth error.
+  const apiKey = getApiKey();
   return createOpenAICompatible({
     name: 'variorum-local',
     baseURL: getBaseUrl(),
-    apiKey: getApiKey() ?? 'lm-studio', // LM Studio ignores the key
+    ...(apiKey !== null ? { apiKey } : {}),
     ...(fetchImpl !== undefined ? { fetch: fetchImpl } : {}),
   });
 }

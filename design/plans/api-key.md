@@ -17,7 +17,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
   npx playwright test e2e/api-key.spec.ts
   (the bare "[G1]" grep collides with other features' [G1] tests)
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-08-03)
 
 ## Order
 
