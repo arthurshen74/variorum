@@ -32,7 +32,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 - Write scope: src/components/artifact/ArtifactPane.tsx
 - Tests: e2e/artifact-collision.spec.ts — filters: npx playwright test --grep "\[G5\]"
 - Depends on: none (tests land revisions through the repository dev handle)
-- Status: RED
+- Status: GREEN (2026-08-03)
 
 ### G4 — chat UI
 - Intent: ChatPane over useChat + AI Elements; ChatMessage, ArtifactChip; loader, cancel-discards, error row, badge.

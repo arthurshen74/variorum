@@ -3,8 +3,22 @@
  * the single working-copy buffer, and the Save button. Extensions edit
  * the buffer through onChange; Save is the ONE manual-save path no matter
  * which tab did the editing.
+ *
+ * The pane also follows revisions landing underneath it (DESIGN.md "Chat"
+ * step 5): silently while the buffer is clean, and behind a keep-or-take
+ * prompt while it is dirty. The revision itself is already captured by
+ * the repository — the prompt only decides what the buffer shows.
  */
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useVariorum } from '@/state/store';
 import { selectConfiguration, selectUnit } from '@/state/selectors';
 import { applicableExtensions } from '@/extensions/registry';
@@ -13,6 +27,16 @@ import { repository } from '@/persistence/repository';
 
 interface ArtifactPaneProps {
   unitId: string | null;
+}
+
+// The buffer and the revision it was seeded from. `base` is what makes a
+// landing revision detectable: the latest content moving away from it is a
+// new revision, and whether `working` still matches it decides between
+// following silently and prompting.
+interface Buffer {
+  unitId: string | null;
+  base: string;
+  working: string;
 }
 
 export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
@@ -30,14 +54,29 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
   );
 
   const latestContent = unit?.artifacts.at(-1)?.content ?? '';
-  const [workingCopy, setWorkingCopy] = useState(latestContent);
+  const seeded: Buffer = {
+    unitId,
+    base: latestContent,
+    working: latestContent,
+  };
+  const [buffer, setBuffer] = useState<Buffer>(seeded);
+  const [collision, setCollision] = useState(false);
 
-  // New unit selected → new working copy. (An LLM revision landing while
-  // dirty gets a keep-or-take prompt when chat lands; see DESIGN.md.)
-  useEffect(() => {
-    setWorkingCopy(latestContent);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unitId]);
+  if (buffer.unitId !== unitId) {
+    // The buffer belongs to the unit, not to the pane.
+    setBuffer(seeded);
+    setCollision(false);
+  } else if (buffer.base !== latestContent) {
+    // A revision landed. An untouched buffer follows it; so does one whose
+    // own manual save is the revision that just landed.
+    // The `collision` guard is load-bearing: a render-phase update never
+    // bails out on an equal value, so re-setting it would loop.
+    if (buffer.working === buffer.base || buffer.working === latestContent) {
+      setBuffer(seeded);
+    } else if (!collision) {
+      setCollision(true);
+    }
+  }
 
   const context: ExtensionContext = {
     artifactType: configuration?.artifactType ?? 'text',
@@ -58,7 +97,7 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
     );
   }
 
-  const dirty = workingCopy !== latestContent;
+  const dirty = buffer.working !== latestContent;
   const ExtensionComponent = activeTab?.component ?? null;
 
   return (
@@ -86,7 +125,7 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
             type="button"
             disabled={!dirty}
             onClick={() => {
-              void repository.saveManualEdit(unit.id, workingCopy);
+              void repository.saveManualEdit(unit.id, buffer.working);
             }}
             className="rounded-md border px-2 py-1 text-xs font-medium enabled:hover:bg-accent disabled:opacity-50"
           >
@@ -104,14 +143,53 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
             }
           >
             <ExtensionComponent
-              content={workingCopy}
-              onChange={setWorkingCopy}
+              content={buffer.working}
+              onChange={(next) => {
+                setBuffer((current) => ({ ...current, working: next }));
+              }}
               readOnly={false}
               context={context}
             />
           </Suspense>
         ) : null}
       </div>
+      <Dialog open={collision}>
+        {/* Undismissable: leaving without choosing would re-prompt on the
+            next render, so the two buttons are the only ways out. */}
+        <DialogContent
+          showCloseButton={false}
+          onEscapeKeyDown={(event) => event.preventDefault()}
+          onInteractOutside={(event) => event.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>A new revision landed</DialogTitle>
+            <DialogDescription>
+              The response wrote revision {unit.artifacts.length} while this
+              editor held edits of your own. The revision is kept either way —
+              choose what the editor shows.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBuffer((current) => ({ ...current, base: latestContent }));
+                setCollision(false);
+              }}
+            >
+              Keep my edit
+            </Button>
+            <Button
+              onClick={() => {
+                setBuffer(seeded);
+                setCollision(false);
+              }}
+            >
+              Take new revision
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
