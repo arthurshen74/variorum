@@ -365,9 +365,14 @@ class Repository implements VariorumRepository {
 
   // ---- Danger zone (interface-only) ---------------------------------------
 
-  exportDatabase(): Promise<DatabaseDump> {
+  exportDatabase(
+    deliver: (dump: DatabaseDump) => Promise<void>,
+  ): Promise<DatabaseDump> {
     return this.enqueue(async () => {
       const dump = this.snapshot();
+      // A rejected delivery propagates with the bit still set, so prune
+      // keeps refusing after a cancelled save.
+      await deliver(dump);
       variorumStore.setState({ dirtySinceExport: false });
       return dump;
     });
@@ -428,11 +433,18 @@ class Repository implements VariorumRepository {
     });
   }
 
-  replaceDatabase(dump: DatabaseDump): Promise<DatabaseDump> {
+  replaceDatabase(
+    dump: DatabaseDump,
+    deliverBackup: (backup: DatabaseDump) => Promise<void>,
+  ): Promise<DatabaseDump> {
     return this.enqueue(async () => {
       // Refuse before capturing or wiping anything.
       assertValidDump(SCHEMA_VERSION, dump);
       const backup = this.snapshot();
+      // Capture, deliver, and only then destroy: a rejected delivery
+      // propagates before the first byte is wiped. Delivery runs inside the
+      // mutation queue so nothing can land between capture and wipe.
+      await deliverBackup(backup);
       await clearAndPutMany(this.requireDb(), [
         ...dump.configurations.map((doc) => ({
           store: 'configurations' as const,

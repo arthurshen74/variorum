@@ -29,7 +29,7 @@ primitive in package.json, so building them is also a dependency decision.
   `src/persistence/repository.test.ts` — filter:
   `npx vitest run src/persistence/`
 - Depends on: none — the repository never imports `dump-file.ts`
-- Status: RED (8 failing)
+- Status: GREEN (2026-08-03)
 
 ### G3 — file IO
 - Intent: the picker/anchor/file-input layer, and the DEV handle that exposes
