@@ -22,7 +22,7 @@ approval.
 - Tests: src/components/dialogs/configuration-form.test.ts — filter:
   npx vitest run -t "[G1]"
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-08-03)
 
 ### G3 — endpoint URL logic
 - Intent: parseBaseUrl boundary validation, clearBaseUrl reset
