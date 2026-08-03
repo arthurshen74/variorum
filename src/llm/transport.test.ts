@@ -1,11 +1,12 @@
 /**
- * Unit tests for the endpoint URL's pure core (DESIGN.md "API Keys &
- * Endpoint URL"): boundary validation only. Storage roundtrip, reset,
- * and export-invisibility are covered by e2e/management-ui.spec.ts —
- * the same split as the theme mechanism.
+ * Unit tests for the transport's pure core (DESIGN.md "API Keys &
+ * Endpoint URL"): boundary validation and normalization only. Storage
+ * roundtrip, reset, export-invisibility, and on-the-wire Authorization
+ * behavior are covered by e2e/management-ui.spec.ts and
+ * e2e/api-key.spec.ts — the same split as the theme mechanism.
  */
 import { describe, expect, it } from 'vitest';
-import { parseBaseUrl } from './transport';
+import { normalizeApiKey, parseBaseUrl } from './transport';
 
 describe('[G3] parseBaseUrl', () => {
   it('accepts an http or https URL and returns it trimmed', () => {
@@ -26,5 +27,17 @@ describe('[G3] parseBaseUrl', () => {
   it('rejects blank input', () => {
     expect(parseBaseUrl('')).toBeNull();
     expect(parseBaseUrl('   ')).toBeNull();
+  });
+});
+
+describe('[G1] normalizeApiKey', () => {
+  it('returns the trimmed key for a non-empty entry', () => {
+    expect(normalizeApiKey('sk-abc')).toBe('sk-abc');
+    expect(normalizeApiKey('  sk-abc  ')).toBe('sk-abc');
+  });
+
+  it('returns null for blank input', () => {
+    expect(normalizeApiKey('')).toBeNull();
+    expect(normalizeApiKey('   ')).toBeNull();
   });
 });

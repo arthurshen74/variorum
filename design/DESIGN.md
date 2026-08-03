@@ -30,6 +30,13 @@ never holds it). When no URL is stored, the default
 removing the stored value so the default shows through, not writing a
 copy of it.
 
+The key has no default and no placeholder: when none is stored, requests
+carry no `Authorization` header at all. LM Studio needs none, and an
+endpoint that does require one answers with its own auth error — the
+honest signal, better than a made-up `Bearer` value muddying it. Saving
+an empty key field removes the stored value; empty and unset are the
+same state, and a whitespace-only entry counts as empty.
+
 On the keys: be aware of XSS risks here. I will be imposing npm lockfile
 discipline for myself but if you are forking this, please be careful.
 Store your keys at your own risk.
@@ -660,13 +667,17 @@ four views:
   nothing. The UI does the comparison because the repository method is
   deliberately an unconditional append — "a Save that changes nothing
   mints nothing" is the dialog's promise here.
-- **Endpoint** — a menu entry beside the configuration list, for the one
-  global LLM setting: the endpoint base URL (device state; see "API Keys
-  & Endpoint URL"). A URL field prefilled with the effective value; Save
-  requires a parseable http(s) URL and stores it; Reset to default
-  removes the stored value. Global and device-scoped on purpose — it is
-  which server this machine talks to, not part of any configuration's
-  recipe, so it lives outside the version history and outside the export.
+- **Endpoint** — a menu entry beside the configuration list, for the two
+  global LLM settings: the endpoint base URL and the API key (device
+  state; see "API Keys & Endpoint URL"). A URL field prefilled with the
+  effective value; Save requires a parseable http(s) URL and stores it;
+  Reset to default removes the stored value. Below it, an API key field
+  (password input) prefilled with the stored key; Save stores the
+  trimmed value, or removes the stored key when the field is empty —
+  unset-key semantics per "API Keys & Endpoint URL". Global and
+  device-scoped on purpose — it is which server this machine talks to,
+  not part of any configuration's recipe, so it lives outside the
+  version history and outside the export.
 
 Validation sits at the form (a system boundary): name, artifact type, and
 model name must be non-empty; sampling fields are free-text numbers where

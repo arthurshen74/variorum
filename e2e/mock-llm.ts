@@ -5,7 +5,12 @@
  * every mock sits at the network boundary — nothing inside the app is
  * faked (CLAUDE.md harness rules).
  */
-import { createServer, type Server, type ServerResponse } from 'node:http';
+import {
+  createServer,
+  type IncomingHttpHeaders,
+  type Server,
+  type ServerResponse,
+} from 'node:http';
 
 export interface Chunk {
   content?: string;
@@ -45,6 +50,8 @@ export class MockLlm {
   private held: ServerResponse | undefined;
   /** Parsed JSON bodies of every completion request, in order. */
   readonly requests: Record<string, unknown>[] = [];
+  /** Headers of every completion request, in order (names lowercased by node). */
+  readonly headers: IncomingHttpHeaders[] = [];
   url = '';
 
   /** Responses are consumed one per request; the last one repeats. */
@@ -65,6 +72,7 @@ export class MockLlm {
       });
       req.on('end', () => {
         this.requests.push(JSON.parse(raw) as Record<string, unknown>);
+        this.headers.push(req.headers);
         const scripted =
           this.script.length > 1
             ? (this.script.shift() as ScriptedResponse)

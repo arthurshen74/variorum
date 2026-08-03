@@ -54,6 +54,16 @@ export function setApiKey(key: string): void {
   localStorage.setItem(API_KEY_KEY, key);
 }
 
+/** Boundary normalization: the trimmed key, or null when empty/whitespace-only. */
+export function normalizeApiKey(_input: string): string | null {
+  throw new Error('not implemented: normalizeApiKey');
+}
+
+/** Unset: remove the stored key so requests carry no Authorization header. */
+export function clearApiKey(): void {
+  throw new Error('not implemented: clearApiKey');
+}
+
 /**
  * Provider factory. The model id, system prompt, and sampling parameters
  * come from the active configuration version at call time — never from
