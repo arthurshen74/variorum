@@ -135,6 +135,12 @@ test('[G3] the downloaded backup restores the pre-replace database', async ({
 test('[G3] export downloads a pretty-printed dump under a dated name', async ({
   page,
 }) => {
+  // The picker exists in this Chromium (localhost is a secure context) but can
+  // never open one, and its refusal is an AbortError — the same error a real
+  // Cancel raises. Removing it is what makes the anchor path deterministic.
+  await page.addInitScript(() => {
+    delete (window as unknown as Record<string, unknown>).showSaveFilePicker;
+  });
   await seed(page);
 
   const downloadPromise = page.waitForEvent('download');

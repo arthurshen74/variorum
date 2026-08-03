@@ -34,11 +34,12 @@ primitive in package.json, so building them is also a dependency decision.
 ### G3 — file IO
 - Intent: the picker/anchor/file-input layer, and the DEV handle that exposes
   it so the acceptance specs can drive it
-- Write scope: `src/components/dialogs/file-io.ts`, `src/main.tsx`
+- Write scope: `src/components/dialogs/file-io.ts`, `src/main.tsx`,
+  `e2e/dump-transport.spec.ts` (added 2026-08-03 for the amendment below)
 - Tests: `e2e/dump-transport.spec.ts` — filter:
   `npx playwright test --grep "\[G3\]"`
 - Depends on: G1, G2
-- Status: RED (6 failing)
+- Status: GREEN (2026-08-03)
 
 ## Order
 
@@ -54,9 +55,10 @@ above are the precise ones.
 ## Known gaps at RED
 
 - `showSaveFilePicker`'s SUCCESS path is not automatable — Playwright cannot
-  drive a native save dialog. Test "export falls back to an anchor download
-  when the save picker is absent" covers the fallback branch only; the picker
-  branch is manual verification.
+  drive a native save dialog. Tests "export downloads a pretty-printed dump
+  under a dated name" and "export falls back to an anchor download when the
+  save picker is absent" both delete the API and cover the fallback branch
+  only; the picker branch is manual verification.
 - One G2 test is already green: "never invokes the deliverer when the dump is
   refused" passes because today's `replaceDatabase` refuses before it would
   call anything. It locks real behavior and must stay green, but it proves
@@ -72,6 +74,21 @@ above are the precise ones.
 mechanically (17 in `repository.replace.test.ts`, 2 in
 `repository.import.test.ts`, 1 in `repository.test.ts`, plus both existing e2e
 specs). No assertion in any locked test was changed — only the argument lists.
+
+2026-08-03 — `dump-transport.spec.ts` "[G3] export downloads a pretty-printed
+dump under a dated name": added the `addInitScript` that deletes
+`showSaveFilePicker`, the same one the fallback test already used. G3's write
+scope gained the spec file for this. The test assumed Playwright's Chromium
+lacks the picker; it does not — `http://localhost` is a secure context, so the
+API is present and `page.evaluate` even carries user activation. Headless
+Chromium cannot open the native dialog, so the call rejects with `AbortError`,
+which is byte-for-byte what a real Cancel raises. Nothing distinguishes them,
+so the only implementation that satisfied the test unamended was one that
+downloads a file after the user declines to save — contradicting DESIGN.md
+"Cancelling costs nothing" and `repository.test.ts` "a rejected delivery
+propagates and leaves the dirty bit set". No spec delta: DESIGN.md's two
+mechanisms are unchanged, and the assertion's meaning — an export reaches disk
+pretty-printed under a dated name — is unchanged.
 
 2026-07-31 — `dump-file.test.ts` "strips unknown keys from the envelope": the
 expected literal was not in sorted order, so `Object.keys(parsed).sort()` could
