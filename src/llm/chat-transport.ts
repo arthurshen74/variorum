@@ -76,6 +76,10 @@ export class VariorumChatTransport implements ChatTransport<UIMessage> {
       temperature: version.temperature,
       topP: version.topP,
       abortSignal: options.abortSignal,
+      // A failed request is a boundary the user resolves with Retry, not
+      // something the SDK re-attempts behind their back — silent retries
+      // would hide a down endpoint behind a long pause.
+      maxRetries: 0,
     });
 
     return Promise.resolve(

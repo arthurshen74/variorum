@@ -6,7 +6,19 @@
  * block; the chip appears only on completed messages.
  */
 import type { ReactElement } from 'react';
-import type { UIMessage } from 'ai';
+import { isReasoningUIPart, isTextUIPart, type UIMessage } from 'ai';
+import {
+  Message,
+  MessageContent,
+  MessageResponse,
+} from '@/components/ai-elements/message';
+import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+} from '@/components/ai-elements/reasoning';
+import { partitionResponse } from '@/domain/extract';
+import { ArtifactChip } from './ArtifactChip';
 
 export interface ChatMessageProps {
   message: UIMessage;
@@ -21,7 +33,57 @@ export interface ChatMessageProps {
   isStreaming: boolean;
 }
 
-export function ChatMessage(props: ChatMessageProps): ReactElement {
-  void props;
-  throw new Error('not implemented: ChatMessage');
+function joinText(message: UIMessage): string {
+  return message.parts
+    .filter(isTextUIPart)
+    .map((part) => part.text)
+    .join('');
+}
+
+function joinReasoning(message: UIMessage): string {
+  return message.parts
+    .filter(isReasoningUIPart)
+    .map((part) => part.text)
+    .join('');
+}
+
+export function ChatMessage({
+  message,
+  versionTag,
+  artifactType,
+  revisionVersion,
+  isStreaming,
+}: ChatMessageProps): ReactElement {
+  const reasoning = joinReasoning(message);
+  const text = joinText(message);
+  // Nothing is THE artifact until the message completes, so a fence still
+  // streaming stays inline as an ordinary code block.
+  const partitioned = isStreaming
+    ? { before: text, artifact: null, after: '' }
+    : partitionResponse(text, artifactType);
+
+  return (
+    <Message from={message.role}>
+      <MessageContent>
+        {reasoning !== '' ? (
+          <Reasoning isStreaming={isStreaming}>
+            <ReasoningTrigger>Reasoning</ReasoningTrigger>
+            <ReasoningContent>{reasoning}</ReasoningContent>
+          </Reasoning>
+        ) : null}
+        {partitioned.before !== '' ? (
+          <MessageResponse>{partitioned.before}</MessageResponse>
+        ) : null}
+        {partitioned.artifact !== null ? (
+          <ArtifactChip revisionVersion={revisionVersion} />
+        ) : null}
+        {partitioned.after !== '' ? (
+          <MessageResponse>{partitioned.after}</MessageResponse>
+        ) : null}
+      </MessageContent>
+      {versionTag !== '' ? (
+        <span className="text-[11px] text-muted-foreground">{versionTag}</span>
+      ) : null}
+    </Message>
+  );
 }

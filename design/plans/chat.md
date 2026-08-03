@@ -36,10 +36,10 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 
 ### G4 — chat UI
 - Intent: ChatPane over useChat + AI Elements; ChatMessage, ArtifactChip; loader, cancel-discards, error row, badge.
-- Write scope: src/components/chat/**, src/components/shell/ChatPane.tsx, src/components/ai-elements/** (vendored), package.json (vendoring AI Elements adds runtime deps — LIST THEM AND GET HUMAN APPROVAL before install, per CLAUDE.md)
+- Write scope: src/components/chat/**, src/components/shell/ChatPane.tsx, src/components/ai-elements/** (vendored), src/components/ui/** + components.json + src/index.css (shadcn primitives and styles the AI Elements CLI pulls in), src/llm/chat-transport.ts (maxRetries only), package.json + package-lock.json (vendoring AI Elements adds runtime deps — LIST THEM AND GET HUMAN APPROVAL before install, per CLAUDE.md)
 - Tests: e2e/chat.spec.ts (+ helper e2e/mock-llm.ts) — filters: npx playwright test --grep "\[G4\]"
 - Depends on: G1, G2, G3, and G5 (the chip spec asserts the editor pane shows the landed revision — G5's follow behavior)
-- Status: RED
+- Status: GREEN (2026-08-03)
 
 ## Order
 
@@ -50,4 +50,10 @@ after G1 — but one-group-at-a-time remains the default.
 
 ## Amendments
 
-(none)
+- 2026-08-03 — G4 write scope, no test changed. Added src/llm/chat-transport.ts
+  (maxRetries only): the SDK treats a 500 as retryable and fires three
+  requests, so the error-row spec's second scripted response was consumed
+  as a silent retry and no failure ever surfaced. Also added
+  src/components/ui/**, components.json, src/index.css, and
+  package-lock.json — the AI Elements CLI writes shadcn primitives and
+  streamdown styles outside the vendored directory.
