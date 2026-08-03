@@ -18,7 +18,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 - Write scope: src/persistence/repository.ts
 - Tests: src/persistence/repository.chat.test.ts — filters: npx vitest run -t "[G2]" (this file only; older suites reuse the [G2] tag)
 - Depends on: G1 (types)
-- Status: RED (1 red; 6 green-at-birth locks on the existing unchanged/messageIndex/version-tagging behavior)
+- Status: GREEN (2026-08-03)
 
 ### G3 — llm layer
 - Intent: SDK boundary mappings and VariorumChatTransport (latest-saved recipe at call time; reasoning never re-sent; top_k and reasoning_effort must reach the wire — the provider drops both natively, the injectable fetch wrapper is the sanctioned path).

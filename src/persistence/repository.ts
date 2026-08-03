@@ -204,6 +204,12 @@ class Repository implements VariorumRepository {
         configVersion: version.version,
         sentAt: assistant.sentAt,
         receivedFinishedAt: assistant.receivedFinishedAt,
+        // Spread, not `reasoning: undefined` — structured clone keeps an
+        // explicit-undefined key, and byte-equality on import would then
+        // see two identical messages as different records.
+        ...(assistant.reasoning !== undefined
+          ? { reasoning: assistant.reasoning }
+          : {}),
         content: assistant.content,
       };
       const messages = [...unit.messages, message];
