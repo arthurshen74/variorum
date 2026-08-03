@@ -81,6 +81,7 @@ export interface Message {
   configVersion: number; // + unit.configName = "linkml.4"
   sentAt: string; // ISO datetime
   receivedFinishedAt?: string; // assistant only
+  reasoning?: string; // assistant only; never re-sent as request context
   content: string;
 }
 
@@ -166,11 +167,12 @@ export interface NewConfigurationInfo {
  * Deliberately OUR type, not the AI SDK's message type: the SDK's shape
  * belongs to Vercel and churns across majors (v4 → v5 reshaped messages
  * entirely); the persistence format belongs to us and must outlive that.
- * The chat layer maps SDK → this in its onFinish handler — three fields,
- * one line of mapping — and the repository stays SDK-agnostic.
+ * The chat layer maps SDK → this in its onFinish handler, and the
+ * repository stays SDK-agnostic.
  */
 export interface AssistantCompletion {
   content: string;
+  reasoning?: string; // separate chain-of-thought, when the model returned it
   sentAt: string; // when the request went out
   receivedFinishedAt: string; // when streaming finished
 }
@@ -213,9 +215,12 @@ export interface VariorumRepository {
   /**
    * One atomic whole-document write when a response completes: appends the
    * assistant message (configVersion resolved same as above) and, if
-   * artifactContent is provided (the extractor found a changed artifact),
-   * captures an Artifact revision with source 'llm' and messageIndex
-   * stitched to the just-appended message. Message and revision can never
+   * artifactContent is provided (the extractor found a fence), captures an
+   * Artifact revision with source 'llm' and messageIndex stitched to the
+   * just-appended message. The repository — not the caller — compares
+   * artifactContent against the latest revision, whatever its source:
+   * equal bytes mint nothing, mirroring saveManualEdit ("a response that
+   * changes nothing mints nothing"). Message and revision can never
    * disagree, because they are one `put`.
    */
   completeExchange(

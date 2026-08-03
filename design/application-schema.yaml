@@ -204,6 +204,11 @@ classes:
         description: >-
           Assistant messages only — when the completion finished streaming.
         range: datetime
+      reasoning:
+        description: >-
+          Assistant messages only — chain-of-thought content the model
+          returned separately with this response. Part of the record,
+          never sent back as context in later requests (DESIGN.md "Chat").
       content:
         required: true
 

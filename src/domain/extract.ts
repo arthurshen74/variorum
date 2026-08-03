@@ -21,3 +21,26 @@ export function extractArtifact(
   }
   return last;
 }
+
+/**
+ * The transcript-side split (DESIGN.md "Chat"): prose before the lifted
+ * fence, the artifact itself, prose after — the chip renders in between.
+ * Only the LAST matching fence (the lifted one) is removed from the
+ * prose; earlier matching fences stay in `before` as ordinary code
+ * blocks. `artifact` always equals extractArtifact for the same input;
+ * when it is null, `before` is the whole text and `after` is empty.
+ */
+export interface PartitionedResponse {
+  before: string;
+  artifact: string | null;
+  after: string;
+}
+
+export function partitionResponse(
+  responseText: string,
+  artifactType: string,
+): PartitionedResponse {
+  void responseText;
+  void artifactType;
+  throw new Error('not implemented: partitionResponse');
+}

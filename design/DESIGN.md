@@ -707,6 +707,106 @@ that rejected Catalyst. Revisit when AI Elements supports Base UI; shadcn
 kept one abstraction over both, so the move stays mechanical. AppShell
 owns which dialog is open, the same way it owns the selected unit.
 
+## Chat
+
+The right pane's conversation UI: a standard modern streaming chat —
+animated waiting state, streamed text, streamed chain-of-thought, cancel —
+plus the one thing that makes it Variorum: post-hoc artifact extraction
+into the unit's revision history. The full architecture conversation is
+preserved in
+[chats/initial-chat-with-claude-fable.md](chats/initial-chat-with-claude-fable.md);
+this section is what survived it, plus the decisions taken since.
+
+**Stack.** AI Elements components over the AI SDK's `useChat` —
+Conversation, Message, Response (streaming markdown), Reasoning (the
+collapsible chain-of-thought block: auto-open while streaming, collapsed
+when done), PromptInput (whose submit button becomes Stop while a response
+is in flight), and Loader (the animated feedback between send and first
+token). `useChat`'s default transport POSTs to a server route we don't
+have, so a small custom `ChatTransport` calls `streamText` in the browser
+with the provider from `transport.ts`. That transport class is the
+designated seam: it is the single file that would change if requests ever
+routed through a proxy. `ChatPane` keys one `useChat` instance by unit id,
+seeded from the unit's persisted messages; switching units tears the
+instance down.
+
+**Post-hoc extraction, not streaming extraction.** Decided in the original
+design chat and standing: the prose streams live, and the artifact is
+lifted in one pass when the message completes. A streaming fence router
+earns its complexity when users watch huge documents being written;
+Variorum's artifact is a file destined for the editor pane, and nobody
+cares whether it lands mid-stream or two seconds later. Post-hoc
+extraction is a pure function (`domain/extract.ts`), fully testable, with
+no split-chunk edge cases: the configuration's `artifactType` is the fence
+language, the LAST matching fence wins (a response showing intermediate
+attempts ends with the final artifact), and no match means no revision.
+
+**The exchange, end to end.**
+
+1. Send: `appendUserMessage` first — the user's message is durable before
+   any network is touched, and the repository (never the caller) tags it
+   with the latest saved version of the unit's configuration.
+2. The transport builds the request from that same version: model id,
+   system prompt, sampling parameters, reasoning effort — plus the unit's
+   full message history. Nothing is hardcoded; the recipe is the config.
+3. While waiting, the Loader animates (`useChat` status `submitted`);
+   once streaming, text and reasoning deltas render live. Streaming state
+   lives entirely in `useChat` (see State Architecture) — nothing touches
+   the repository mid-stream.
+4. On completion, the SDK shapes cross the anti-corruption boundary
+   (`llm/mapping.ts`) into an `AssistantCompletion`, `extractArtifact`
+   runs over the final text, and ONE atomic `completeExchange` call
+   appends the assistant message and (if a fence matched) the artifact
+   revision, stitched via `messageIndex`.
+5. If the working copy is dirty when the revision lands, the ArtifactPane
+   prompts keep-or-take (see Extensions). The revision is captured
+   unconditionally — append-only history — the prompt only decides what
+   the working buffer shows.
+
+Assistant messages display their version tag (`linkml.4`, from the
+message's `configVersion`) — the reproducibility story made visible.
+
+**Cancel discards.** Stop aborts the stream and nothing from the partial
+response survives — no assistant message, no revision, and the partial
+text leaves the display too, so the screen never disagrees with the
+record. The user message stays: it was honestly sent, and a question whose
+answer was rejected mid-flight is still part of the notebook. A cancelled
+response is never extracted from — revisions come from completed
+responses only, per Persistence & Data Model. Switching units mid-stream
+is a cancel with the same semantics.
+
+**Reasoning is persisted.** `Message` gains an optional `reasoning` field
+(assistant messages, when the model returned separate reasoning content).
+Variorum's identity is provenance — the chain of thought that produced
+revision 3 is part of the record, and reopening a unit shows it again,
+collapsed. Two consequences, accepted: the hand-written dump validator
+must learn the field by hand (the standing cost noted in "The Dump Is a
+File"), and reasoning joins the byte-equality that import-merge compares —
+correctly, since two messages differing in reasoning are different
+records. Reasoning is display-and-record only: it is NEVER sent back as
+context in later requests.
+
+**The artifact chip.** In the transcript, the fence the extractor lifted
+collapses to a compact chip — "Artifact → revision N", resolved through
+the revision's `messageIndex` — instead of duplicating the whole artifact
+inside a chat column. Rendering re-runs the extractor over the persisted
+message, so the chip needs no stored linkage beyond what the data model
+already has. While streaming, the fence renders as an ordinary growing
+code block: post-hoc extraction means nothing is THE artifact until the
+message completes. A matching fence that minted no revision (byte-identical
+re-emission) collapses to an "unchanged" chip. Non-matching fences are
+ordinary code blocks, always.
+
+**Errors.** A failed request (endpoint down, CORS off) is a boundary:
+an inline error row in the transcript with a Retry that re-sends without
+re-appending the already-persisted user message.
+
+**Deferred, deliberately.** Wiring the model's four tools into the chat
+loop is its own follow-up slice: it needs multi-step streaming, tool-call
+rendering, the archive confirmation gate's UI, and an answer for how a
+tool handler switches the shell's active unit. The tool surface itself
+(`llm/tools.ts`) is settled and does not change.
+
 ## State Architecture
 
 Zustand plus a hand-rolled IndexedDB wrapper. The shape, and the why:
