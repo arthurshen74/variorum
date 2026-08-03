@@ -59,10 +59,11 @@ export function setApiKey(key: string): void {
  * come from the active configuration version at call time — never from
  * here (CLAUDE.md: never hardcode them).
  */
-export function createProvider() {
+export function createProvider(fetchImpl?: typeof fetch) {
   return createOpenAICompatible({
     name: 'variorum-local',
     baseURL: getBaseUrl(),
     apiKey: getApiKey() ?? 'lm-studio', // LM Studio ignores the key
+    ...(fetchImpl !== undefined ? { fetch: fetchImpl } : {}),
   });
 }

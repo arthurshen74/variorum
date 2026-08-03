@@ -25,7 +25,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 - Write scope: src/llm/mapping.ts, src/llm/chat-transport.ts, src/llm/transport.ts (only if fetch threading requires it)
 - Tests: src/llm/mapping.test.ts, src/llm/chat-transport.test.ts — filters: npx vitest run -t "[G3]"
 - Depends on: G1 (types)
-- Status: RED
+- Status: GREEN (2026-08-03)
 
 ### G5 — keep-or-take
 - Intent: ArtifactPane follows landing revisions (clean → silently, dirty → prompt).

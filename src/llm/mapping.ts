@@ -8,6 +8,10 @@
 import type { ModelMessage, UIMessage } from 'ai';
 import type { AssistantCompletion, Message } from '@/domain/types';
 
+// The SDK's part discriminators — the two shapes Variorum ever produces.
+const PART_TEXT = 'text';
+const PART_REASONING = 'reasoning';
+
 export function toAssistantCompletion(args: {
   content: string;
   reasoning?: string;
@@ -27,17 +31,46 @@ export function toAssistantCompletion(args: {
  * part; persisted reasoning becomes a reasoning part (rendered collapsed).
  */
 export function toUIMessages(messages: Message[]): UIMessage[] {
-  void messages;
-  throw new Error('not implemented: toUIMessages');
+  return messages.map((message, index) => ({
+    // Position is the identity: the conversation is append-only, so an
+    // index is stable across re-seeds and unique within the unit.
+    id: `message-${index}`,
+    role: message.role,
+    parts: [
+      ...(message.reasoning !== undefined
+        ? [
+            {
+              type: PART_REASONING,
+              text: message.reasoning,
+              state: 'done',
+            } as const,
+          ]
+        : []),
+      { type: PART_TEXT, text: message.content } as const,
+    ],
+  }));
 }
 
 /**
- * Request context: strips ALL reasoning parts before conversion —
- * reasoning is display-and-record only, never re-sent (DESIGN.md "Chat").
+ * Request context: text parts only. Reasoning is display-and-record only,
+ * never re-sent (DESIGN.md "Chat"), and dropping everything but text is
+ * what makes that structural rather than a rule someone has to remember.
  */
 export function toModelMessages(messages: UIMessage[]): ModelMessage[] {
-  void messages;
-  throw new Error('not implemented: toModelMessages');
+  return messages.map((message): ModelMessage => {
+    const content = message.parts
+      .filter((part) => part.type === PART_TEXT)
+      .map((part) => part.text)
+      .join('');
+    switch (message.role) {
+      case 'system':
+        return { role: 'system', content };
+      case 'user':
+        return { role: 'user', content };
+      case 'assistant':
+        return { role: 'assistant', content };
+    }
+  });
 }
 
 /**
@@ -49,8 +82,16 @@ export function completionFromUIMessage(
   sentAt: string,
   receivedFinishedAt: string,
 ): AssistantCompletion {
-  void message;
-  void sentAt;
-  void receivedFinishedAt;
-  throw new Error('not implemented: completionFromUIMessage');
+  const text = message.parts.filter((part) => part.type === PART_TEXT);
+  const reasoning = message.parts.filter(
+    (part) => part.type === PART_REASONING,
+  );
+  return toAssistantCompletion({
+    content: text.map((part) => part.text).join(''),
+    ...(reasoning.length > 0
+      ? { reasoning: reasoning.map((part) => part.text).join('') }
+      : {}),
+    sentAt,
+    receivedFinishedAt,
+  });
 }

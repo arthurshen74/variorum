@@ -7,7 +7,45 @@
  * request context (never re-sent). This class is the designated seam: the
  * single file that would change if requests ever routed through a proxy.
  */
+import { streamText, toUIMessageStream } from 'ai';
 import type { ChatTransport, UIMessage, UIMessageChunk } from 'ai';
+import { variorumStore } from '@/state/store';
+import { selectLatestVersion, selectUnit } from '@/state/selectors';
+import type { ConfigurationVersion } from '@/domain/types';
+import { toModelMessages } from './mapping';
+import { createProvider } from './transport';
+
+// OpenAI-compatible request body fields the SDK provider will not send:
+// it reports topK as unsupported, and reaches reasoning effort only
+// through a provider-name-keyed option. Both are spliced in below.
+const BODY_TOP_K = 'top_k';
+const BODY_REASONING_EFFORT = 'reasoning_effort';
+
+function extraBodyFields(
+  version: ConfigurationVersion,
+): Record<string, unknown> {
+  return {
+    ...(version.topK !== undefined ? { [BODY_TOP_K]: version.topK } : {}),
+    ...(version.reasoningEffort !== undefined
+      ? { [BODY_REASONING_EFFORT]: version.reasoningEffort }
+      : {}),
+  };
+}
+
+/** Wraps fetch to merge extra fields into the JSON request body. */
+function withExtraBodyFields(
+  base: typeof fetch,
+  extra: Record<string, unknown>,
+): typeof fetch {
+  if (Object.keys(extra).length === 0) return base;
+  return async (input, init) => {
+    const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    return base(input, {
+      ...init,
+      body: JSON.stringify({ ...body, ...extra }),
+    });
+  };
+}
 
 export interface ChatTransportDeps {
   /** Injectable for node tests; defaults to global fetch. */
@@ -23,12 +61,51 @@ export class VariorumChatTransport implements ChatTransport<UIMessage> {
   sendMessages(
     options: Parameters<ChatTransport<UIMessage>['sendMessages']>[0],
   ): Promise<ReadableStream<UIMessageChunk>> {
-    void options;
-    throw new Error('not implemented: VariorumChatTransport.sendMessages');
+    const version = this.latestVersion();
+    const provider = createProvider(
+      withExtraBodyFields(
+        this.deps.fetchImpl ?? globalThis.fetch,
+        extraBodyFields(version),
+      ),
+    );
+
+    const result = streamText({
+      model: provider(version.modelName),
+      system: version.systemPrompt,
+      messages: toModelMessages(options.messages),
+      temperature: version.temperature,
+      topP: version.topP,
+      abortSignal: options.abortSignal,
+    });
+
+    return Promise.resolve(
+      toUIMessageStream({
+        stream: result.stream,
+        // There is no server here to leak internals to — the endpoint is
+        // the user's own, and the error row is only useful if it names
+        // the failure.
+        onError: (error) =>
+          error instanceof Error ? error.message : String(error),
+      }),
+    );
   }
 
   /** No server holds streams for us — always resolves null. */
   reconnectToStream(): Promise<ReadableStream<UIMessageChunk> | null> {
-    throw new Error('not implemented: VariorumChatTransport.reconnectToStream');
+    return Promise.resolve(null);
+  }
+
+  /** Read at call time: a Save between sends changes the next request. */
+  private latestVersion(): ConfigurationVersion {
+    const state = variorumStore.getState();
+    const unit = selectUnit(this.unitId)(state);
+    if (unit === undefined) {
+      throw new Error(`unknown unit: ${this.unitId}`);
+    }
+    const version = selectLatestVersion(unit.configName)(state);
+    if (version === undefined) {
+      throw new Error(`configuration has no versions: ${unit.configName}`);
+    }
+    return version;
   }
 }
