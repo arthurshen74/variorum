@@ -17,11 +17,22 @@ are using local models so we can control directly the CORS setup. However, if
 you want to connect this to something like OpenRouter, this might be an issue.
 If you want to use this project in this way, you should be aware of the issue.
 
-## API Keys
+## API Keys & Endpoint URL
 
-LocalStorage. Be aware of XSS risks here. I will be imposing npm lockfile
-discipline for myself but if you are forking this, please be careful. Store
-your keys at your own risk.
+Two pieces of LLM plumbing are device state, not user data: the API key
+(`variorum.apiKey`) and the endpoint base URL (`variorum.baseUrl`). Both
+live in localStorage, beside the theme preference — the third resident of
+the same seam (see "Theming" for why that placement is structural: device
+state can never appear in an export and never trips the
+dirty-since-export bit, because export dumps IndexedDB and IndexedDB
+never holds it). When no URL is stored, the default
+`http://localhost:1234/v1` (LM Studio's default) applies; "reset" means
+removing the stored value so the default shows through, not writing a
+copy of it.
+
+On the keys: be aware of XSS risks here. I will be imposing npm lockfile
+discipline for myself but if you are forking this, please be careful.
+Store your keys at your own risk.
 
 ## UI
 
@@ -138,7 +149,9 @@ fallback. Three decisions worth recording:
 Everything lives in a single IndexedDB database. One database, one export, one
 thing to reason about. Configurations (see below) live in that same database
 rather than off in localStorage — one persistence layer, one import/export
-path.
+path. The only things outside it are the three localStorage residents —
+API key, endpoint URL, theme preference — which are device state and
+deliberately barred from the export path (see "API Keys & Endpoint URL").
 
 **Schema.** The exact shapes — the three collections (configurations — name
 records, configurationVersions, units) and the inlined Message/Artifact
@@ -617,6 +630,83 @@ edit them, a prompt injection in pasted artifact text could rewrite its own
 standing instructions for every future conversation — a persistence vector
 strictly nastier than archiving a unit. The Save button is a human's button.
 
+## Management UI
+
+The front door for configurations and units: two surfaces, both plain
+dialogs and buttons per the shell decision in "UI" (dialogs over the main
+pane, close-out X, no routing). A chat-driven or LLM-mediated flow was
+considered and rejected: configurations are interface-only by invariant
+(the model never reads or writes them), and unit management is three
+obvious clicks — a form is the honest tool.
+
+**The Configurations dialog** opens from the sidebar's gear button and has
+four views:
+
+- **List** — active configurations, each with edit and archive actions;
+  archived configurations in a separate group below, each with restore.
+  Archive/restore need no confirmation: the inverse action is one click
+  away in the same dialog.
+- **Add** — the name-record fields (name, description, artifact type) plus
+  the first version's recipe (model name, system prompt, temperature,
+  top_p, top_k, reasoning effort). Save calls `createConfiguration`,
+  minting `name.1`. A duplicate name is rejected by the repository; the
+  form surfaces the error and stays open.
+- **Edit** — name and artifact type render read-only (identity and
+  set-at-creation, per "Configurations"). Description is editable in
+  place. The recipe fields are a draft prefilled from the latest saved
+  version. Save compares: a changed recipe mints version N+1 via
+  `saveConfigurationVersion`; a changed description updates the name
+  record via `updateConfigurationDescription`; an unchanged field calls
+  nothing. The UI does the comparison because the repository method is
+  deliberately an unconditional append — "a Save that changes nothing
+  mints nothing" is the dialog's promise here.
+- **Endpoint** — a menu entry beside the configuration list, for the one
+  global LLM setting: the endpoint base URL (device state; see "API Keys
+  & Endpoint URL"). A URL field prefilled with the effective value; Save
+  requires a parseable http(s) URL and stores it; Reset to default
+  removes the stored value. Global and device-scoped on purpose — it is
+  which server this machine talks to, not part of any configuration's
+  recipe, so it lives outside the version history and outside the export.
+
+Validation sits at the form (a system boundary): name, artifact type, and
+model name must be non-empty; sampling fields are free-text numbers where
+blank means unset (the field is omitted from the version record, and so
+from the request); a non-numeric entry blocks Save. Reasoning effort is a
+discrete four-stop slider (shadcn Slider): unset / low / medium / high,
+leftmost meaning unset — the field is omitted from the version record,
+which is how reasoning is turned off.
+
+Draft state is component state inside the dialog, per the hard invariant:
+closing the dialog discards it silently; reopening Edit re-prefills from
+the latest saved version. Nothing is persisted, staged, or sent anywhere
+until Save.
+
+**Sidebar unit controls.** The unit list itself already exists (active
+units, click to load). This adds:
+
+- **New unit** — the sidebar's + button opens a small dialog: conversation
+  name plus a picker over active configurations. Create calls
+  `createUnit`, selects the new unit, and closes. With zero active
+  configurations the + button is disabled with a hint, because a unit
+  cannot exist without a configuration binding.
+- **Archive** — a per-row action that asks for confirmation
+  (ArchiveConfirm) before calling `archiveUnit`. Confirmation is warranted
+  here and not for configurations: this slice ships no unit-restore UI,
+  so archiving a unit is one-way until an archived-units view exists.
+  Archiving the currently loaded unit deselects it, returning the
+  artifact pane to its empty state.
+
+**Dialog mechanism: shadcn's Dialog and Slider, Radix build.** This slice
+runs `shadcn init` (the token file `src/index.css` already exists; init
+adds `components.json` and `src/components/ui/`) and vendors Dialog and
+Slider. shadcn's default primitive library is Base UI as of July 2026,
+with Radix fully supported; we pin the **Radix build** (`-b radix`)
+because AI Elements — the declared chat-pane stack — is still built on
+Radix-flavored shadcn, and one primitive layer per app is the same rule
+that rejected Catalyst. Revisit when AI Elements supports Base UI; shadcn
+kept one abstraction over both, so the move stays mechanical. AppShell
+owns which dialog is open, the same way it owns the selected unit.
+
 ## State Architecture
 
 Zustand plus a hand-rolled IndexedDB wrapper. The shape, and the why:
@@ -706,7 +796,7 @@ src/
     ├── shell/                   # AppShell, Sidebar, ChatPane
     ├── artifact/                # ArtifactPane (tabs, working copy, Save), RevisionHistory
     ├── chat/                    # messages, reasoning (CoT), loaders, tool confirmations
-    └── dialogs/                 # Configuration, Export/Import, Prune, ArchiveConfirm
+    └── dialogs/                 # Configurations, NewUnit, ArchiveConfirm, Export/Import, Prune
         └── file-io.ts           # THE only file touching Blob / anchor / picker / input[type=file]
 ```
 

@@ -10,7 +10,8 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 const BASE_URL_KEY = 'variorum.baseUrl';
 const API_KEY_KEY = 'variorum.apiKey';
 
-const DEFAULT_BASE_URL = 'http://localhost:1234/v1'; // LM Studio default
+// Exported so the Endpoint view can show what Reset returns to.
+export const DEFAULT_BASE_URL = 'http://localhost:1234/v1'; // LM Studio default
 
 export function getBaseUrl(): string {
   return localStorage.getItem(BASE_URL_KEY) ?? DEFAULT_BASE_URL;
@@ -18,6 +19,16 @@ export function getBaseUrl(): string {
 
 export function setBaseUrl(url: string): void {
   localStorage.setItem(BASE_URL_KEY, url);
+}
+
+/** Boundary validation: trimmed, parseable, http(s)-schemed URL — or null. */
+export function parseBaseUrl(_input: string): string | null {
+  throw new Error('not implemented: parseBaseUrl');
+}
+
+/** Reset: remove the stored value so the default shows through. */
+export function clearBaseUrl(): void {
+  throw new Error('not implemented: clearBaseUrl');
 }
 
 export function getApiKey(): string | null {

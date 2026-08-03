@@ -145,8 +145,9 @@ Data model:
   stores: `configurations` (name records: description, artifactType,
   archived), `configurationVersions` (immutable recipes), `units`. Shapes
   are declared in `design/application-schema.yaml`. The only exceptions:
-  API keys and the device theme preference live in localStorage (device
-  state — never in the Zustand store, never in an export). Export is a
+  API keys, the LLM endpoint URL, and the device theme preference live in
+  localStorage (device state — never in the Zustand store, never in an
+  export). Export is a
   full-database dump including archived units and all configuration
   versions.
 - `artifactType` lives on the configuration _name_ record — set at
