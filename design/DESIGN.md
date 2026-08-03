@@ -4,10 +4,6 @@ This is the single source of truth for Variorum's design and architecture
 decisions. The [README](../README.md) summarizes and links here; it does not
 restate. If a decision changes, it changes in this file.
 
-For the origin story of several of these decisions, see the
-[initial design conversation](initial-chat-with-claude-fable.md) (historical,
-never edited).
-
 ## Stack
 
 SPA. React / TypeScript (strict) / Tailwind / Vite / shadcn / Vercel AI
@@ -34,7 +30,7 @@ shout-out thank you to that team! Come to think of it, thanks to Tailwind also!
 
 The component stack is shadcn/ui plus AI Elements, full stop. **Catalyst was
 considered and rejected** — I own Tailwind Plus for life, so the leverage was
-tempting, but: AI Elements is built *on* shadcn, so Catalyst would be a
+tempting, but: AI Elements is built _on_ shadcn, so Catalyst would be a
 second design system on a second primitive layer (Headless UI next to
 Radix), blind to the shadcn CSS-variable tokens that theme everything else;
 and Catalyst-derived source in this Apache-2.0 repo would hang a
@@ -51,7 +47,7 @@ no pages. Chain-of-thought renders in the chat pane (reasoning content
 comes back separately; see Configurations), streaming gets animated
 feedback, and checkpointing is the revision history the data model already
 provides — "restore to revision 3" is a manual save of revision 3's
-content, minting a *new* revision, because history is append-only even when
+content, minting a _new_ revision, because history is append-only even when
 walking backward.
 
 ## Theming
@@ -60,7 +56,7 @@ The app renders in a light or dark theme. A device-level setting offers
 **auto | light | dark**, default **auto**: auto follows the browser's
 `prefers-color-scheme` and reacts live if it flips mid-session; light and
 dark override it. The preference persists in localStorage
-(`variorum.theme`), beside the API keys — it is a *device* preference, not
+(`variorum.theme`), beside the API keys — it is a _device_ preference, not
 user data. That placement makes two properties structural rather than
 enforced: it can never appear in an export (export dumps the IndexedDB
 database, which the theme never touches), and changing it never trips the
@@ -114,7 +110,7 @@ dependencies) that serves the packed `dist/` with an `index.html` SPA
 fallback. Three decisions worth recording:
 
 - **A static server is delivery, not a backend.** The "no server" rule
-  above forbids an *application* backend — anything that holds state,
+  above forbids an _application_ backend — anything that holds state,
   proxies LLM traffic, or owns an API. The bin script does none of that:
   it maps URLs to files in `dist/` and knows nothing about the app it
   serves. It exists only because browsers won't run a module SPA off
@@ -129,7 +125,7 @@ fallback. Three decisions worth recording:
 - **The `ignore-scripts` publish gotcha.** `.npmrc` sets
   `ignore-scripts=true` so installs never execute third-party lifecycle
   scripts (see the lockfile discipline in [CLAUDE.md](../CLAUDE.md)). The
-  flag is symmetric, though: it also suppresses *our own* lifecycle
+  flag is symmetric, though: it also suppresses _our own_ lifecycle
   scripts, so `prepublishOnly` — which runs the build — silently does not
   run under `npm publish`, and publishing without a manual `npm run build`
   first packs a stale or missing `dist/`. Hence the bin script's 500
@@ -159,7 +155,7 @@ name) and stays bound to it for life — the artifact type can't shift
 underneath a revision history.
 
 **Single tab per unit — a declared non-goal.** Atomicity above is not
-enforced by discipline; it's structural: a unit is stored as *one document*,
+enforced by discipline; it's structural: a unit is stored as _one document_,
 messages and artifacts inlined. There is no way to delete an artifact history
 and keep its conversation because there is nothing to delete independently.
 The flip side of that bargain: appending one message means read the whole
@@ -202,7 +198,7 @@ prune must never touch configurations: version records are pointed at by
 every response tag, and deleting them would break the reproducibility story
 for every surviving unit. Note also that prune is not a storage feature — a
 configuration is a prompt and a few floats, and the whole database is
-megabytes. Prune exists for *privacy*: "this is truly gone from my disk" is
+megabytes. Prune exists for _privacy_: "this is truly gone from my disk" is
 a right worth keeping over your own database, and without prune the only
 true delete would be dropping the entire IndexedDB database in devtools — a
 far blunter instrument. (Replace is now the sanctioned blunt instrument —
@@ -236,10 +232,10 @@ case by case. (Replace — the wholesale door that deliberately is NOT
 import — has its own subsection at the end.)
 
 Why the default is merge, and why replace exists anyway: a replace-all
-*import* would silently delete everything not in the dump — the biggest
+_import_ would silently delete everything not in the dump — the biggest
 true delete in the system, bigger than prune, hiding behind a button
 labeled "import." That objection stands, so import is and stays a merge:
-it only ever adds, and it *subsumes* restore — importing into an empty
+it only ever adds, and it _subsumes_ restore — importing into an empty
 database is a merge with nothing to collide with, which is exactly a
 restore. And because every merge decision below uses only content
 comparison — never timestamps — nothing depends on trusting wall clocks
@@ -273,7 +269,7 @@ dense 1..N on both sides, so this is a simple zip. Three exits: incoming
 ends first with everything matching → it's an ancestor, import nothing.
 Local ends first with everything matching → fast-forward: append incoming's
 extra versions (appending versions is exactly what Save does; no existing
-tag changes meaning). Or both sides have a version *k* with different
+tag changes meaning). Or both sides have a version _k_ with different
 bytes → **diverged.**
 
 Worked example: local `linkml` has versions 1–4, the dump has 1–5, and they
@@ -313,18 +309,18 @@ messages (role, configVersion, timestamps, content) and whole artifacts.
 
 **Do not splice — deliberate, not lazy.** A conversation is not a set of
 independent edits: message 9′ was generated by a model whose entire context
-was messages 1–8 *and nothing else*. A spliced unit containing 1–8, 9–10,
+was messages 1–8 _and nothing else_. A spliced unit containing 1–8, 9–10,
 9′–12′ describes a conversation that never happened, feeding artifact
 revisions whose provenance is fiction. A unit is a lab notebook, not a
 source file: when two photocopies of a notebook diverge, you keep two
 notebooks — you don't paste half-pages together and pretend that experiment
-ran. Keep-both yields two complete, internally consistent, *true*
+ran. Keep-both yields two complete, internally consistent, _true_
 histories (their shared prefix duplicated, again at no meaningful cost).
 And cloning a unit can never break anything, because nothing points at
 units — the same arrow rule that makes prune safe.
 
 **The manual-save edge.** Fast-forward must check messages AND artifacts,
-prefixed in the *same direction*. Manual saves mint artifact revisions
+prefixed in the _same direction_. Manual saves mint artifact revisions
 without adding messages, so two sides can have identical messages yet
 diverged artifact histories (each saved a different manual edit). Equal on
 one array and prefix-in-one-direction on the other is still a
@@ -361,7 +357,7 @@ defensible answer:
 - **Metadata vs. "same bytes."** The trichotomy compares the immutable
   payload only — a lineage's version recipes, a unit's messages and
   artifacts. Records differing only in mutable metadata (archived,
-  description, conversationName) are *identical*: skip, local metadata
+  description, conversationName) are _identical_: skip, local metadata
   untouched. Incoming metadata is read only when the merge writes a NEW
   record — added lineages and units, kept-both clones — where it rides
   in unchanged, because there is no local counterpart for local-wins to
@@ -375,13 +371,13 @@ defensible answer:
 - **The report counts entities, not records.** One identical lineage —
   name record plus all its versions — is one skip; one identical unit is
   one. Incoming-is-an-ancestor (local kept going, incoming didn't) is
-  also one skip: *fast-forwarded* is reserved for records that actually
+  also one skip: _fast-forwarded_ is reserved for records that actually
   gained history. Every incoming entity lands in exactly one bucket.
 
 - **A renamed lineage demotes its units' fast-forwards to keep-both.**
   The tempting graft: local unit at messages 1–8, incoming at 1–10, a
   clean prefix — but the unit's lineage diverged, so incoming came in as
-  `linkml~2`, and messages 9–10 carry version tags that meant *incoming's*
+  `linkml~2`, and messages 9–10 carry version tags that meant _incoming's_
   recipe bytes. Appending them to the local unit — bound to `linkml` for
   life — would re-point those tags at local's diverged bytes: precisely
   the lie the rename exists to prevent. A local unit is modified by
@@ -390,12 +386,12 @@ defensible answer:
 
 - **Minting is the last resort: divergence first hunts for a lossless
   landing.** Without this, every re-import of a diverged dump would
-  make room *again* — a fresh rename, a fresh wave of clones — and
+  make room _again_ — a fresh rename, a fresh wave of clones — and
   "importing the same dump twice is a no-op" would be false. So when
   the identity match diverges, the merge scans the family of prior
   landing spots (`linkml~2`, `linkml~3`, … for a lineage; units bound
   to the post-rewrite configName for a unit) with the same comparison
-  it always uses: a member that already *contains* the incoming record
+  it always uses: a member that already _contains_ the incoming record
   → skip; failing that, a member the incoming record strictly extends
   → fast-forward it; only when every candidate diverges is a fresh
   name or uuid minted. Preference is skip, then fast-forward (longest
@@ -445,7 +441,7 @@ the new one, never half of each. A store with no incoming records is still
 cleared — replacing with an empty dump empties the database.
 
 **Settled edge — `dirtySinceExport` is true afterwards.** The bit means
-"*this repository's* export has run since the last mutation" — a claim the
+"_this repository's_ export has run since the last mutation" — a claim the
 repository can verify about itself. The returned backup describes a
 database that no longer exists, and the incoming dump is a caller-supplied
 object the repository validated but never proved exists as a durable file
@@ -509,7 +505,7 @@ a signature, not in a habit.
 
 **Settled edge — delivery means initiated, not durable.** The anchor path
 has no completion signal: `deliverBackup` resolving means the browser
-accepted the blob, not that bytes are on disk. The picker path *does* give
+accepted the blob, not that bytes are on disk. The picker path _does_ give
 a real one (`await writable.close()`). So the more critical path carries
 the weaker signal, which is worth stating plainly rather than pretending
 otherwise. It is still the right trade: between a backup that might not
@@ -531,7 +527,7 @@ and the messages and artifacts nested inside them. Failures name their path
 the user cannot tell which record spoiled it.
 
 The gate is separate from `assertValidDump`, and runs first. That guard
-enforces *meaning* — schema version, referential integrity — for every
+enforces _meaning_ — schema version, referential integrity — for every
 caller including the in-memory ones that never touched a file, and it
 trusts that its argument is shaped like a `DatabaseDump`. The parse gate is
 what earns that trust. Structure first, then meaning.
@@ -548,8 +544,8 @@ changing the validator, by hand, on purpose.
 
 A **configuration** is a named recipe for producing one kind of artifact,
 keyed by a short name (`linkml`, `react-component`). It's split across two
-records, because some things belong to the *name* and some things belong to
-a *version* of the recipe.
+records, because some things belong to the _name_ and some things belong to
+a _version_ of the recipe.
 
 The **name record** (one per configuration, keyed by name) holds what never
 versions:
@@ -565,7 +561,7 @@ versions:
 The **version records** (keyed by name + version) are the recipe proper:
 
 - **model identifier** — which model LM Studio should run. Deliberately
-  *inside* the version: swapping qwen for llama changes behavior more
+  _inside_ the version: swapping qwen for llama changes behavior more
   than any temperature tweak, so it versions like everything else.
 - **system prompt**
 - **sampling parameters** — temperature, top_p, and top_k (top_k isn't
@@ -573,7 +569,7 @@ The **version records** (keyed by name + version) are the recipe proper:
 - **reasoning effort** — stored, but best-effort. As of this writing LM Studio
   ignores `reasoning_effort` on `/v1/chat/completions` (the server's UI
   setting wins) and only honors `reasoning.effort` on the newer `/v1/responses`
-  endpoint for gpt-oss models. Reasoning *content* does come back separately
+  endpoint for gpt-oss models. Reasoning _content_ does come back separately
   (`choices.message.reasoning`). So the field rides along in the request and
   works where the server supports it.
 
@@ -589,7 +585,7 @@ export. You never edit version 4 — you create version 5.
 
 Editing happens in a **draft**: fiddle with the sliders and the prompt all you
 like, nothing is versioned until you hit **Save**, which mints the next
-immutable version. Generation always runs against the latest *saved* version —
+immutable version. Generation always runs against the latest _saved_ version —
 unsaved draft state never reaches a request. This keeps slider-fiddling from
 minting a pile of versions nothing ever used, while preserving the rule that
 any saved change bumps the version.
@@ -597,9 +593,9 @@ any saved change bumps the version.
 **Tagging.** Units and responses both point at configurations, at different
 granularities:
 
-- a **unit** is tagged with a configuration *name* at creation (`linkml`),
+- a **unit** is tagged with a configuration _name_ at creation (`linkml`),
   permanently;
-- each **response** is tagged with the exact configuration *version* that
+- each **response** is tagged with the exact configuration _version_ that
   produced it (`linkml.4`).
 
 New responses in a unit always use the latest saved version of the unit's
@@ -653,7 +649,7 @@ a hundred lines around a promisified IDBRequest. Single-operation
 transactions also dodge IndexedDB's classic trap (a transaction
 auto-commits the moment you await anything that isn't an IDB request).
 
-**What stays out of the store.** Configuration *drafts* are component-local
+**What stays out of the store.** Configuration _drafts_ are component-local
 state — never in the store, never persisted — which is how "unsaved draft
 state never reaches a request" is enforced physically rather than by
 politeness. Streaming chat state belongs to the AI SDK's `useChat` while a
@@ -734,7 +730,7 @@ exercises.
 
 **The axiom: extensions speak artifact text, and nothing else.** The
 canonical form of an artifact is the string — that is what gets revisioned,
-exported, merged, and extracted from LLM fences. An extension is a *view*
+exported, merged, and extracted from LLM fences. An extension is a _view_
 over that string: the code editor renders it highlighted; a graph editor
 parses the YAML into nodes, lets you drag relationships around, and
 serializes back to YAML on every change. The consequences are all
@@ -777,7 +773,7 @@ Code — megabytes of it, plus web-worker plumbing that fights Vite — while
 CM6 is modular and an order of magnitude smaller, and a YAML/TypeScript
 textbox with highlighting is squarely its sweet spot.
 
-**Growth rule.** The contract earns new fields only when a *second*
+**Growth rule.** The contract earns new fields only when a _second_
 consumer demands them. If the graph editor someday needs to report parse
 errors to the host, that is when `EditorProps` grows — not before. Two
 consumers make an abstraction; one makes speculation.
