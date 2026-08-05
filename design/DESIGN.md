@@ -700,6 +700,15 @@ units, click to load). This adds:
   `createUnit`, selects the new unit, and closes. With zero active
   configurations the + button is disabled with a hint, because a unit
   cannot exist without a configuration binding.
+- **Rename** — a per-row pencil icon swaps the unit's name for a text
+  input, prefilled with the current name. Enter commits via
+  `renameConversation`; Escape or blur cancels; a commit whose trimmed
+  value is empty or unchanged calls nothing. No confirmation — a
+  conversation name is a label, not an identity, and re-renaming is the
+  undo. The pencil, not click-on-name, because clicking the name already
+  means "select this unit" — the row's primary gesture stays untouched.
+  While the input is open the row's select and archive actions are
+  hidden; renaming needs no selection and works on any active unit.
 - **Archive** — a per-row action that asks for confirmation
   (ArchiveConfirm) before calling `archiveUnit`. Confirmation is warranted
   here and not for configurations: this slice ships no unit-restore UI,
