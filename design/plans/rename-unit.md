@@ -20,7 +20,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
   npx playwright test e2e/rename-unit.spec.ts (file-scoped because the
   "[G1]" tag collides with earlier manifests' groups)
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-08-05)
 
 ## Order
 

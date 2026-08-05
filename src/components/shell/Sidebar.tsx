@@ -1,11 +1,13 @@
 /**
  * Left sidebar: active units, configuration entry point. Reads through
- * selectors only; the dialogs the buttons open are owned by AppShell.
+ * selectors; the dialogs the buttons open are owned by AppShell. The one
+ * write is the inline rename editor, which calls the repository directly.
  */
 import { useState } from 'react';
-import { ArchiveIcon } from 'lucide-react';
+import { ArchiveIcon, PencilIcon } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import type { Unit } from '@/domain/types';
+import { repository } from '@/persistence/repository';
 import {
   selectActiveConfigurations,
   selectActiveUnits,
@@ -40,6 +42,21 @@ export default function Sidebar({
   const units = useVariorum(useShallow(selectActiveUnits));
   const configurations = useVariorum(useShallow(selectActiveConfigurations));
   const [theme, setTheme] = useState(getThemePreference);
+  const [editingUnitId, setEditingUnitId] = useState<string | null>(null);
+  const [draftName, setDraftName] = useState('');
+
+  function startRename(unit: Unit) {
+    setEditingUnitId(unit.id);
+    setDraftName(unit.conversationName);
+  }
+
+  // Closes the editor either way; a blank or unchanged name renames nothing.
+  function commitRename(unit: Unit) {
+    setEditingUnitId(null);
+    const name = draftName.trim();
+    if (name === '' || name === unit.conversationName) return;
+    void repository.renameConversation(unit.id, name);
+  }
 
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r bg-muted/30">
@@ -69,26 +86,53 @@ export default function Sidebar({
           <ul className="space-y-1">
             {units.map((unit) => (
               <li key={unit.id} className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => onSelectUnit(unit.id)}
-                  className={`min-w-0 flex-1 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent ${
-                    unit.id === activeUnitId ? 'bg-accent font-medium' : ''
-                  }`}
-                >
-                  <span className="block truncate">{unit.conversationName}</span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {unit.configName}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onArchiveUnit(unit)}
-                  className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-                >
-                  <ArchiveIcon aria-hidden="true" className="size-3.5" />
-                  <span className="sr-only">Archive</span>
-                </button>
+                {unit.id === editingUnitId ? (
+                  <input
+                    aria-label="Conversation name"
+                    autoFocus
+                    value={draftName}
+                    onChange={(event) => setDraftName(event.target.value)}
+                    onBlur={() => setEditingUnitId(null)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') commitRename(unit);
+                      if (event.key === 'Escape') setEditingUnitId(null);
+                    }}
+                    className="min-w-0 flex-1 rounded-md border bg-background px-2 py-1.5 text-sm"
+                  />
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onSelectUnit(unit.id)}
+                      className={`min-w-0 flex-1 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent ${
+                        unit.id === activeUnitId ? 'bg-accent font-medium' : ''
+                      }`}
+                    >
+                      <span className="block truncate">
+                        {unit.conversationName}
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {unit.configName}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => startRename(unit)}
+                      className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                    >
+                      <PencilIcon aria-hidden="true" className="size-3.5" />
+                      <span className="sr-only">Rename</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onArchiveUnit(unit)}
+                      className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                    >
+                      <ArchiveIcon aria-hidden="true" className="size-3.5" />
+                      <span className="sr-only">Archive</span>
+                    </button>
+                  </>
+                )}
               </li>
             ))}
           </ul>
