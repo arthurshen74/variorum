@@ -20,7 +20,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 - Tests: src/extensions/linkml-graph/linkml-model.test.ts — filter:
   npx vitest run -t "[G1]"
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-08-06)
 
 ### G2 — flow mapping, layout, device state
 - Intent: `toFlowGraph`, `layoutGraph` (ELK), `loadDeviceState` /
