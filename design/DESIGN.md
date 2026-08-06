@@ -21,7 +21,7 @@ If you want to use this project in this way, you should be aware of the issue.
 
 Two pieces of LLM plumbing are device state, not user data: the API key
 (`variorum.apiKey`) and the endpoint base URL (`variorum.baseUrl`). Both
-live in localStorage, beside the theme preference — the third resident of
+live in localStorage, beside the theme preference — residents of
 the same seam (see "Theming" for why that placement is structural: device
 state can never appear in an export and never trips the
 dirty-since-export bit, because export dumps IndexedDB and IndexedDB
@@ -156,9 +156,11 @@ fallback. Three decisions worth recording:
 Everything lives in a single IndexedDB database. One database, one export, one
 thing to reason about. Configurations (see below) live in that same database
 rather than off in localStorage — one persistence layer, one import/export
-path. The only things outside it are the three localStorage residents —
-API key, endpoint URL, theme preference — which are device state and
-deliberately barred from the export path (see "API Keys & Endpoint URL").
+path. The only things outside it are the localStorage residents — API
+key, endpoint URL, theme preference, and per-unit extension layout state
+(see "Extension device state" under Extensions) — which are device state
+and deliberately barred from the export path (see "API Keys & Endpoint
+URL").
 
 **Schema.** The exact shapes — the three collections (configurations — name
 records, configurationVersions, units) and the inlined Message/Artifact
@@ -909,7 +911,8 @@ src/
 ├── extensions/                  # the plugin surface — see Extensions
 │   ├── extension.ts             # the whole contract
 │   ├── registry.ts              # ordered ExtensionDefinitions; first applicable = default tab
-│   └── code-editor/             # extension zero: the CodeMirror 6 editor
+│   ├── code-editor/             # extension zero: the CodeMirror 6 editor
+│   └── linkml-graph/            # read-only LinkML graph viewer — see "LinkML Graph Viewer"
 └── components/
     ├── ui/                      # shadcn primitives (generated)
     ├── ai-elements/             # AI Elements components (generated)
@@ -947,10 +950,13 @@ serializes back to YAML on every change. The consequences are all
 deliberate: revisions stay uniform, import-merge never learns that
 extensions exist, extensions are swappable mid-unit because they own no
 data, and "restore to revision 3" works identically in every tab.
-Extension-internal state (zoom, node positions) is ephemeral by decree.
+Extension-internal state divides in two: anything artifact-meaningful
+lives ONLY in the string, and layout-class state (zoom, node positions,
+viewport) is ephemeral or persisted as device state — see "Extension
+device state" below.
 
 **The contract** (`src/extensions/extension.ts`) is three types, total: an
-`ExtensionContext` ({ artifactType, configName }), `EditorProps`
+`ExtensionContext` ({ artifactType, configName, unitId }), `EditorProps`
 ({ content, onChange, readOnly, context }), and an `ExtensionDefinition`
 ({ id, title, appliesTo(ctx), lazy component }). `appliesTo` is a plain
 predicate over context — the code editor says `() => true`; a LinkML graph
@@ -978,6 +984,23 @@ lose a draft, because the draft never belonged to a tab. If an LLM
 response lands a new revision while the working copy is dirty, the pane
 prompts the human to pick — keep-both thinking, in miniature.
 
+**Extension device state.** An extension may persist layout-class state in
+localStorage under `variorum.ext.<extensionId>.<unitId>` — the same seam
+as the API key, endpoint URL, and theme, with the same structural
+properties: never in the Zustand store, never in IndexedDB, never in an
+export, never trips the dirty-since-export bit. What qualifies is state
+that changes how the artifact is SHOWN, never what it IS — positions,
+viewport, collapsed panels. Anything that would alter the artifact string
+goes through `onChange` or not at all. Debouncing these writes is fine:
+the no-debounced-autosave rule governs artifact revisions, and this is
+not artifact data. Two accepted consequences: pruned units leave orphaned
+keys behind (bounded cosmetic garbage — localStorage is outside the data
+model, so nothing cascades), and layout does not travel between devices
+or ride in an export, on purpose. `unitId` joined `ExtensionContext` for
+exactly this key — the growth rule's second consumer, arrived: only the
+host knows which unit is open, and a per-unit key cannot be built without
+it.
+
 **Editor library: CodeMirror 6**, not Monaco. Monaco is a transplanted VS
 Code — megabytes of it, plus web-worker plumbing that fights Vite — while
 CM6 is modular and an order of magnitude smaller, and a YAML/TypeScript
@@ -986,7 +1009,93 @@ textbox with highlighting is squarely its sweet spot.
 **Growth rule.** The contract earns new fields only when a _second_
 consumer demands them. If the graph editor someday needs to report parse
 errors to the host, that is when `EditorProps` grows — not before. Two
-consumers make an abstraction; one makes speculation.
+consumers make an abstraction; one makes speculation. `unitId` is the
+first field admitted under this rule (see "Extension device state").
+
+## LinkML Graph Viewer
+
+The second extension: a read-only node/edge rendering of a LinkML YAML
+artifact. `id: linkml-graph`, tab title "Graph", registered ABOVE the code
+editor with `appliesTo: (ctx) => ctx.configName === 'linkml'` — so Graph
+is the default tab for linkml units. The configuration NAME is the match
+signal, not the artifact type: `yaml` is too broad (every YAML-emitting
+configuration would grow a Graph tab), and the name is the precise fact
+the context already carries. When a second LinkML-producing configuration
+exists, the predicate widens — that day, not before.
+
+**The projection is the heart.** LinkML's metamodel has one concept —
+SlotDefinition — reachable by four authoring paths: inline `attributes:`,
+top-level `slots:` referenced from a class's `slots:` list, per-class
+`slot_usage:` refinement, and inheritance (`is_a` / `mixins`). A pure
+module (`linkml-model.ts` — no React, no IO) normalizes the first three
+into ONE internal shape, effective slots per class, so everything
+downstream sees one modeling style, never four. Inheritance is
+deliberately NOT materialized: a class node shows declared slots only,
+and the inheritance edge carries the rest visually. Induced-slot
+resolution (is_a chains, mixin linearization, re-refinement) is the
+LinkML runtime's job; reimplementing it is out of scope until a real
+need arrives.
+
+**Boundary handling, not validation.** The projection takes the content
+string and returns a graph model or a typed failure (unparseable YAML,
+structurally-not-LinkML). It never judges LinkML _validity_ — a
+configuration-level concern for another day. On failure the extension
+keeps rendering the LAST successfully parsed graph with a stale notice,
+never a blank canvas: content legitimately passes through broken states
+whenever the code tab or the model is mid-edit.
+
+**The rendering model.**
+
+- A CLASS is a node: a name header, one row per effective slot whose
+  range is a scalar type or enum — name, range, cardinality glyph.
+- A slot whose range is another class is an EDGE, not a row: anchored at
+  its own handle on the source class node, pointing at the target class,
+  labeled with the cardinality derived from `required` + `multivalued`
+  (`1`, `0..1`, `1..*`, `0..*`).
+- INVERSE pairs collapse to one edge. Two slots declaring each other
+  `inverse` are one relationship; the edge carries a label at each end
+  (that side's slot name). A dangling or asymmetric `inverse` degrades
+  to an ordinary directed edge — a tolerated input, not an error.
+- `is_a` and `mixins` are a second edge kind, visually distinct:
+  inheritance, not association.
+- An ENUM is a third node kind listing its permissible values; a slot
+  ranging over it gets a visually lighter edge from its class (the slot
+  also remains a row — the row states the fact, the edge shows the
+  reference).
+
+**Layout: elkjs, layered.** Chosen over dagre (ELK has ports — edges can
+anchor at slot-row handles — plus active maintenance and better layered
+quality) and d3-force (no hierarchy; `is_a` chains would not read as
+trees). The bundle weight is neutralized by the lazy-extension rule.
+Node dimensions are content-driven, so layout runs against measured
+sizes (React Flow's two-pass mount). Placement rule: a saved position
+always wins; nodes without one are placed by ELK with the placed nodes
+as fixed hints, so new classes join an existing layout without
+reshuffling it. An explicit auto-arrange control reruns the full layout
+and overwrites every saved position — the escape hatch for degraded
+layouts.
+
+**Layout is device state.** Persisted per "Extension device state" under
+`variorum.ext.linkml-graph.<unitId>`: node positions keyed by class/enum
+NAME, plus the viewport. Name-keying makes renames self-healing: the
+orphaned position is ignored and the node re-laid-out. Writes are
+debounced on drag-end and viewport settle.
+
+**Read-only, precisely.** This extension never calls `onChange` — in v1
+no code path can alter the artifact. `readOnly` therefore changes
+nothing here: drag, zoom, and pan remain available when it is true,
+because layout is presentation, not artifact data. (Editing — with
+attributes-only writing and generation-style detection — is a designed
+future slice, deliberately not this one.)
+
+**Dependencies** (human-approved): `@xyflow/react` (React Flow),
+`elkjs`, `yaml`. `yaml` over lighter parsers for its `Document` API —
+the future editing slice needs comment- and format-preserving edits, and
+the upgrade path should live inside one library.
+
+**Non-goals, recorded:** editing actions; inheritance-induced slot
+display; node resize; LinkML validation; any layout persistence beyond
+localStorage device state.
 
 ## Local Tools (Function Calling)
 

@@ -16,6 +16,8 @@ export interface ExtensionContext {
   artifactType: string;
   /** The unit's lifetime configuration binding — e.g. "linkml". */
   configName: string;
+  /** The open unit's id — the key for per-unit device state. */
+  unitId: string;
 }
 
 export interface EditorProps {

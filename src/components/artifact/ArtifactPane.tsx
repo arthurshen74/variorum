@@ -81,6 +81,7 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
   const context: ExtensionContext = {
     artifactType: configuration?.artifactType ?? 'text',
     configName: unit?.configName ?? '',
+    unitId: unitId ?? '',
   };
   const tabs = applicableExtensions(context);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
