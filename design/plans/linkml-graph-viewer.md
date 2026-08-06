@@ -32,7 +32,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
   layout.test.ts, device-state.test.ts — filter:
   npx vitest run -t "[G2]"
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-08-06)
 
 ### G3 — component, registry, acceptance
 - Intent: the LinkmlGraphViewer component (React Flow rendering,
