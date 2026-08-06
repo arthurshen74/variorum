@@ -1,12 +1,12 @@
 /**
  * [G3] Acceptance for DESIGN.md "LinkML Graph Viewer": the Graph tab as
- * linkml default, class/edge rendering, last-good-parse on breakage,
- * position persistence, never-dirties, and auto-arrange.
+ * linkml default, class/edge rendering, the parse error replacing the
+ * canvas, position persistence, never-dirties, and auto-arrange.
  *
  * Locator contract the implementation must meet: tab buttons carry their
  * titles ("Graph", "Editor"); React Flow's `.react-flow__node` class
- * marks nodes (its public DOM contract); the stale banner shows the text
- * "Showing the last valid parse"; the arrange control is a button named
+ * marks nodes (its public DOM contract); the error pane is headed "This
+ * artifact isn't valid YAML"; the arrange control is a button named
  * "Auto-arrange"; the pane's dirty marker is the text "unsaved" beside a
  * "Save" button (ArtifactPane's existing contract).
  */
@@ -117,7 +117,7 @@ test('[G3] classes render as nodes with slot rows; a class-range slot is an edge
   await expect(personNode(page)).not.toContainText('pets');
 });
 
-test('[G3] breaking the YAML in the Editor keeps the last-good graph with a stale notice', async ({
+test('[G3] breaking the YAML in the Editor replaces the graph with a parse error', async ({
   page,
 }) => {
   await seedLinkmlUnit(page);
@@ -127,11 +127,16 @@ test('[G3] breaking the YAML in the Editor keeps the last-good graph with a stal
   const editor = page.locator('.cm-content');
   await editor.click();
   await page.keyboard.press('ControlOrMeta+a');
-  await page.keyboard.type('classes: {');
+  // Broken through the editor's bracket auto-closing, which would turn a
+  // typed `{` into a perfectly valid `{}`.
+  await page.keyboard.type('a: b: c');
 
   await page.getByRole('button', { name: 'Graph' }).click();
-  await expect(personNode(page)).toBeVisible();
-  await expect(page.getByText('Showing the last valid parse')).toBeVisible();
+  await expect(
+    page.getByText("This artifact isn't valid YAML"),
+  ).toBeVisible();
+  await expect(personNode(page)).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Auto-arrange' })).toBeHidden();
 });
 
 test('[G3] a dragged position survives a reload', async ({ page }) => {

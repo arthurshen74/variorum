@@ -1040,9 +1040,13 @@ need arrives.
 string and returns a graph model or a typed failure (unparseable YAML,
 structurally-not-LinkML). It never judges LinkML _validity_ — a
 configuration-level concern for another day. On failure the extension
-keeps rendering the LAST successfully parsed graph with a stale notice,
-never a blank canvas: content legitimately passes through broken states
-whenever the code tab or the model is mid-edit.
+renders the parse error in place of the canvas, and never a graph: a
+rendered graph is read as a picture of the CURRENT artifact, so a stale
+one is a lie no banner cancels — and the moment it matters most is when a
+model response lands an artifact that no longer parses. Mid-edit
+breakage costs nothing here: the viewer is unmounted while the code tab
+holds the screen, so it re-parses only on a tab switch and on a landing
+revision, and both are moments where failing loudly is the honest answer.
 
 **The rendering model.**
 
@@ -1096,6 +1100,18 @@ the upgrade path should live inside one library.
 **Non-goals, recorded:** editing actions; inheritance-induced slot
 display; node resize; LinkML validation; any layout persistence beyond
 localStorage device state.
+
+**Rolling back to the last revision that parses** is the designed
+follow-up to the error pane, and deliberately not this slice. It is a
+HOST capability, not an extension one: the extension sees only `content`
+and can no more reach the revision history than it can reach the
+repository, and the host cannot pick the target revision because knowing
+what parses is precisely the LinkML knowledge it must not hold. So it
+needs two things this slice does not build — the revision-history UI
+that makes "restore to revision 3" reachable (see "UI"), and the
+validity hook by which the host asks an extension whether a string
+parses. That hook is the growth rule's next admission, on the day it is
+built.
 
 ## Local Tools (Function Calling)
 

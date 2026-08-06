@@ -45,7 +45,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
   filters: npx vitest run -t "[G3]" /
   npx playwright test --grep "\[G3\]"
 - Depends on: G1, G2
-- Status: RED
+- Status: GREEN (2026-08-07)
 
 ## Order
 
@@ -55,4 +55,18 @@ one-at-a-time is the default. G3 composes both and goes last.
 
 ## Amendments
 
-(none)
+- 2026-08-07 — e2e/linkml-graph.spec.ts, "breaking the YAML in the Editor
+  keeps the last-good graph with a stale notice" → "…replaces the graph
+  with a parse error". Spec delta first (DESIGN.md "LinkML Graph Viewer",
+  "Boundary handling"): a failed parse now renders the error in place of
+  the canvas instead of the last successfully parsed graph. Two reasons.
+  The behaviour: a rendered graph reads as a picture of the current
+  artifact, and the case that matters — a model response landing
+  unparseable YAML — is exactly where a stale picture misleads and a
+  banner is missed. The test: its fixture never broke anything, because
+  CodeMirror's bracket auto-closing turned the typed `classes: {` into a
+  valid `classes: {}`, which G1 fixes as an empty graph rather than an
+  error (linkml-model.test.ts:310) — so the test passed through the
+  success path under either behaviour. Fixture is now `a: b: c`.
+  Rollback-to-last-parsing-revision was raised in the same discussion and
+  is recorded in DESIGN.md as a separate slice, not built here.
