@@ -5,6 +5,8 @@
  * the domain store.
  */
 import { useState } from 'react';
+import { selectUnit } from '@/state/selectors';
+import { useVariorum } from '@/state/store';
 import ArtifactPane from '@/components/artifact/ArtifactPane';
 import ArchiveConfirm from '@/components/dialogs/ArchiveConfirm';
 import ConfigurationsDialog from '@/components/dialogs/ConfigurationsDialog';
@@ -21,10 +23,15 @@ export default function AppShell() {
   const [activeUnitId, setActiveUnitId] = useState<string | null>(null);
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [archiveTarget, setArchiveTarget] = useState<Unit | null>(null);
-
+  // inside AppShell, after the useState calls:
+  const activeUnitName = useVariorum((s) =>
+    activeUnitId === null ? undefined : (
+      selectUnit(activeUnitId)(s)?.conversationName
+    ),
+  );
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
-      {sidebarOpen ? (
+      {sidebarOpen ?
         <Sidebar
           activeUnitId={activeUnitId}
           onSelectUnit={setActiveUnitId}
@@ -32,7 +39,7 @@ export default function AppShell() {
           onNewUnit={() => setDialog('newUnit')}
           onArchiveUnit={setArchiveTarget}
         />
-      ) : null}
+      : null}
       <main className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-11 shrink-0 items-center gap-2 border-b px-3">
           <button
@@ -43,7 +50,13 @@ export default function AppShell() {
           >
             ☰
           </button>
-          <h1 className="text-sm font-semibold tracking-tight">Variorum</h1>
+          <h1 className="text-sm font-semibold tracking-tight">
+            {activeUnitName !== undefined ?
+              <span className="min-w-0 truncate text-sm text-muted-foreground">
+                {activeUnitName}
+              </span>
+            : 'Variorum'}
+          </h1>
           <button
             type="button"
             onClick={() => setChatOpen((open) => !open)}
@@ -54,7 +67,9 @@ export default function AppShell() {
         </header>
         <ArtifactPane unitId={activeUnitId} />
       </main>
-      {chatOpen ? <ChatPane unitId={activeUnitId} /> : null}
+      {chatOpen ?
+        <ChatPane unitId={activeUnitId} />
+      : null}
       <ConfigurationsDialog
         open={dialog === 'configurations'}
         onOpenChange={(open) => setDialog(open ? 'configurations' : null)}
