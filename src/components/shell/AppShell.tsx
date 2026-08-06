@@ -23,7 +23,6 @@ export default function AppShell() {
   const [activeUnitId, setActiveUnitId] = useState<string | null>(null);
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [archiveTarget, setArchiveTarget] = useState<Unit | null>(null);
-  // inside AppShell, after the useState calls:
   const activeUnitName = useVariorum((s) =>
     activeUnitId === null ? undefined : (
       selectUnit(activeUnitId)(s)?.conversationName
