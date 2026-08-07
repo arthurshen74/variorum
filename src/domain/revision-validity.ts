@@ -7,8 +7,13 @@ import type { Artifact } from '@design/repository-api';
 
 /** The newest artifact whose content validates, or null if none does. */
 export async function findLastValid(
-  _artifacts: Artifact[],
-  _validates: (content: string) => Promise<boolean>,
+  artifacts: Artifact[],
+  validates: (content: string) => Promise<boolean>,
 ): Promise<Artifact | null> {
-  throw new Error('not implemented: findLastValid');
+  // Newest first, one probe at a time: validates parses the content, so
+  // revisions past the answer are never probed.
+  for (const artifact of [...artifacts].reverse()) {
+    if (await validates(artifact.content)) return artifact;
+  }
+  return null;
 }

@@ -22,7 +22,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
   src/extensions/registry.test.ts ("[G1] registry validates" describe) —
   filter: npx vitest run -t "[G1]"
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-08-07)
 
 ### G2 — History dialog
 - Intent: the HistoryDialog component and its pane wiring (History

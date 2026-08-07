@@ -12,8 +12,11 @@ export const extensions: ExtensionDefinition[] = [
     title: 'Graph',
     // The configuration NAME, not the artifact type: yaml is too broad.
     appliesTo: (ctx) => ctx.configName === 'link-ml',
-    validates: async (_content: string): Promise<boolean> => {
-      throw new Error('not implemented: linkml-graph validates');
+    // The parser only, never the component: a validity probe must not drag
+    // the viewer chunk in behind it.
+    validates: async (content: string): Promise<boolean> => {
+      const { parseLinkmlSchema } = await import('./linkml-graph/linkml-model');
+      return parseLinkmlSchema(content).ok;
     },
     component: lazy(() => import('./linkml-graph/LinkmlGraphViewer')),
   },
