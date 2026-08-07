@@ -32,7 +32,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 - Tests: e2e/revision-history.spec.ts — filter:
   npx playwright test --grep "\[G2\]"
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-08-07)
 
 ### G3 — parse-failure banner
 - Intent: the ParseFailureBanner component and its pane wiring

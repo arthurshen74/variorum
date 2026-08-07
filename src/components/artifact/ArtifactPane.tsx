@@ -24,6 +24,7 @@ import { selectConfiguration, selectUnit } from '@/state/selectors';
 import { applicableExtensions } from '@/extensions/registry';
 import type { ExtensionContext } from '@/extensions/extension';
 import { repository } from '@/persistence/repository';
+import { HistoryDialog } from './HistoryDialog';
 
 interface ArtifactPaneProps {
   unitId: string | null;
@@ -61,6 +62,7 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
   };
   const [buffer, setBuffer] = useState<Buffer>(seeded);
   const [collision, setCollision] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   if (buffer.unitId !== unitId) {
     // The buffer belongs to the unit, not to the pane.
@@ -124,6 +126,13 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
           ) : null}
           <button
             type="button"
+            onClick={() => setHistoryOpen(true)}
+            className="rounded-md border px-2 py-1 text-xs font-medium hover:bg-accent"
+          >
+            History
+          </button>
+          <button
+            type="button"
             disabled={!dirty}
             onClick={() => {
               void repository.saveManualEdit(unit.id, buffer.working);
@@ -154,6 +163,11 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
           </Suspense>
         ) : null}
       </div>
+      <HistoryDialog
+        unit={unit}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+      />
       <Dialog open={collision}>
         {/* Undismissable: leaving without choosing would re-prompt on the
             next render, so the two buttons are the only ways out. */}
