@@ -25,6 +25,7 @@ import { applicableExtensions } from '@/extensions/registry';
 import type { ExtensionContext } from '@/extensions/extension';
 import { repository } from '@/persistence/repository';
 import { HistoryDialog } from './HistoryDialog';
+import { ParseFailureBanner } from './ParseFailureBanner';
 
 interface ArtifactPaneProps {
   unitId: string | null;
@@ -102,6 +103,8 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
 
   const dirty = buffer.working !== latestContent;
   const ExtensionComponent = activeTab?.component ?? null;
+  // First applicable extension declaring the hook owns the verdict.
+  const validates = tabs.find((t) => t.validates !== undefined)?.validates;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -143,6 +146,9 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
           </button>
         </div>
       </div>
+      {validates !== undefined ? (
+        <ParseFailureBanner unit={unit} validates={validates} />
+      ) : null}
       <div className="min-h-0 flex-1">
         {ExtensionComponent !== null ? (
           <Suspense

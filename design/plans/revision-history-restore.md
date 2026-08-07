@@ -42,7 +42,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 - Tests: e2e/parse-failure-banner.spec.ts — filter:
   npx playwright test --grep "\[G3\]"
 - Depends on: G1, G2
-- Status: RED
+- Status: GREEN (2026-08-07)
 
 ## Order
 
