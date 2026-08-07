@@ -958,9 +958,15 @@ device state" below.
 **The contract** (`src/extensions/extension.ts`) is three types, total: an
 `ExtensionContext` ({ artifactType, configName, unitId }), `EditorProps`
 ({ content, onChange, readOnly, context }), and an `ExtensionDefinition`
-({ id, title, appliesTo(ctx), lazy component }). `appliesTo` is a plain
+({ id, title, appliesTo(ctx), validates?(content), lazy component }).
+`validates` is optional and ASYNC — `(content: string) => Promise<boolean>`
+— so an implementation can dynamically import its parser and the host can
+ask "does this string parse?" without mounting the component and without
+the parser entering the boot bundle. It judges parseability only, never
+semantic validity, and it must be pure: same string, same answer, no side
+effects. `appliesTo` is a plain
 predicate over context — the code editor says `() => true`; a LinkML graph
-editor says `ctx.configName === "linkml"`, or matches on artifactType, or
+editor says `ctx.configName === "link-ml"`, or matches on artifactType, or
 both. First applicable extension in registry order = the default tab.
 
 **Three rules make "standalone" enforceable rather than aspirational:**
@@ -1007,17 +1013,19 @@ CM6 is modular and an order of magnitude smaller, and a YAML/TypeScript
 textbox with highlighting is squarely its sweet spot.
 
 **Growth rule.** The contract earns new fields only when a _second_
-consumer demands them. If the graph editor someday needs to report parse
-errors to the host, that is when `EditorProps` grows — not before. Two
-consumers make an abstraction; one makes speculation. `unitId` is the
-first field admitted under this rule (see "Extension device state").
+consumer demands them. Two consumers make an abstraction; one makes
+speculation. `unitId` was the first field admitted under this rule (see
+"Extension device state"); `validates` is the second, admitted for
+Revision History & Restore — this paragraph once predicted "if the graph
+editor someday needs to report parse errors to the host", and that day
+arrived as the parse-failure affordance.
 
 ## LinkML Graph Viewer
 
 The second extension: a read-only node/edge rendering of a LinkML YAML
 artifact. `id: linkml-graph`, tab title "Graph", registered ABOVE the code
-editor with `appliesTo: (ctx) => ctx.configName === 'linkml'` — so Graph
-is the default tab for linkml units. The configuration NAME is the match
+editor with `appliesTo: (ctx) => ctx.configName === 'link-ml'` — so Graph
+is the default tab for link-ml units. The configuration NAME is the match
 signal, not the artifact type: `yaml` is too broad (every YAML-emitting
 configuration would grow a Graph tab), and the name is the precise fact
 the context already carries. When a second LinkML-producing configuration
@@ -1101,17 +1109,65 @@ the upgrade path should live inside one library.
 display; node resize; LinkML validation; any layout persistence beyond
 localStorage device state.
 
-**Rolling back to the last revision that parses** is the designed
-follow-up to the error pane, and deliberately not this slice. It is a
-HOST capability, not an extension one: the extension sees only `content`
-and can no more reach the revision history than it can reach the
-repository, and the host cannot pick the target revision because knowing
-what parses is precisely the LinkML knowledge it must not hold. So it
-needs two things this slice does not build — the revision-history UI
-that makes "restore to revision 3" reachable (see "UI"), and the
-validity hook by which the host asks an extension whether a string
-parses. That hook is the growth rule's next admission, on the day it is
-built.
+**Rolling back to the last revision that parses** is a HOST capability
+(see "Revision History & Restore"): the extension sees only `content` and
+can no more reach the revision history than it can reach the repository.
+This extension's contribution is one line of registry metadata — its
+`validates` hook answers `parseLinkmlSchema(content).ok` through a
+dynamic import of `linkml-model.ts`, the same pure module the component
+chunk uses, so the parser still loads only on demand.
+
+## Revision History & Restore
+
+The data model has carried full revision history since day one —
+`Unit.artifacts`, append-only, every LLM landing and manual save. This
+section ships the missing half of the checkpointing sentence in "UI":
+the interface to SEE that history and walk back. Nothing here touches
+the repository surface — restore IS `saveManualEdit` with an old
+revision's content, minting a new revision exactly as "UI" defines.
+History is never rewritten, never truncated; walking backward mints
+forward. One consequence inherited from "a Save that changes nothing
+mints nothing": restoring the revision whose bytes already are the
+latest mints nothing, so the UI disables Restore on the latest revision
+rather than offering a no-op.
+
+**The History dialog.** A "History" control in the artifact pane's
+header (beside Save) opens a dialog — dialogs over the main pane, per
+"UI"; no routing — listing every revision, newest first: version
+designator, saved time, and source (`llm` or `manual`). Broken
+revisions are listed like any other; history does not judge content.
+Each row has a Restore action, no confirmation: the inverse of a wrong
+restore is one more restore, the same reasoning that exempts
+configuration archive from confirmation. No diff view, no preview pane
+— version, time, and source are enough to find "the one before the bad
+one", and anything richer is a future slice on top of the same dialog.
+
+**Restore lands like any other revision.** The minted revision flows
+through the artifact pane's existing buffer logic: a clean working copy
+follows it silently; a dirty one gets the keep-or-take collision
+prompt. No new mechanism — restore is indistinguishable from any other
+save landing under the pane, which is the point.
+
+**The parse-failure affordance.** When the applicable extension list
+for the open unit contains one that declares `validates` (first in
+registry order wins) and the LATEST SAVED revision fails it, the pane
+shows a banner above the editor area: the latest revision does not
+parse, with a "Restore last valid revision" action. The target is the
+newest revision whose content validates; the action is an ordinary
+restore of it. If no revision validates, the banner states that and
+offers nothing. Two boundaries drawn deliberately:
+
+- The trigger is the latest SAVED revision, never the working copy. A
+  broken draft mid-edit is the human's own live keystroke stream — the
+  extension's error pane already narrates it, and offering "restore"
+  against a draft would either discard work or mint nothing (the last
+  valid revision IS the latest when only the draft is broken). Landing
+  a broken revision — the model's doing, or a bad manual save — is the
+  event worth a host-level banner.
+- The banner belongs to the pane, not the extension, and shows
+  regardless of which tab is active: switching to the Editor tab to
+  hand-fix the YAML is exactly when the one-click alternative should
+  stay visible.
 
 ## Local Tools (Function Calling)
 

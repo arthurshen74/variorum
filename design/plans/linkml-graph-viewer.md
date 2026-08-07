@@ -70,3 +70,10 @@ one-at-a-time is the default. G3 composes both and goes last.
   success path under either behaviour. Fixture is now `a: b: c`.
   Rollback-to-last-parsing-revision was raised in the same discussion and
   is recorded in DESIGN.md as a separate slice, not built here.
+- 2026-08-07 — src/extensions/registry.test.ts and
+  e2e/linkml-graph.spec.ts: the graph viewer's match signal is the
+  configuration name `link-ml`, not `linkml` — the human's actual
+  configuration is named `link-ml`. Spec delta first (DESIGN.md
+  "Extensions" predicate example and "LinkML Graph Viewer" `appliesTo`),
+  then both tests' configName fixtures. Worked-example names elsewhere in
+  DESIGN.md (`linkml.4`, `linkml~2`) are illustrative and unchanged.

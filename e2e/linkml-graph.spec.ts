@@ -53,10 +53,10 @@ async function seedLinkmlUnit(page: Page, name = 'schema'): Promise<string> {
     async ({ name, content }) => {
       const { repository } = (window as unknown as DevWindow).variorum;
       await repository.createConfiguration(
-        { name: 'linkml', artifactType: 'yaml' },
+        { name: 'link-ml', artifactType: 'yaml' },
         { modelName: 'mock-model', systemPrompt: 'You produce LinkML.' },
       );
-      const unit = await repository.createUnit(name, 'linkml');
+      const unit = await repository.createUnit(name, 'link-ml');
       await repository.saveManualEdit(unit.id, content);
       return unit.id;
     },

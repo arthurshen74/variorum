@@ -35,6 +35,12 @@ export interface ExtensionDefinition {
   title: string;
   /** Visibility predicate. First applicable in registry order = default tab. */
   appliesTo: (context: ExtensionContext) => boolean;
+  /**
+   * Optional, async, pure: does this content parse? Parseability only,
+   * never semantic validity. Async so the implementation can import its
+   * parser on demand instead of at boot.
+   */
+  validates?: (content: string) => Promise<boolean>;
   /** Always lazy: heavy libraries load when the tab first opens. */
   component: React.LazyExoticComponent<React.ComponentType<EditorProps>>;
 }
