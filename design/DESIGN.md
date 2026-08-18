@@ -819,6 +819,35 @@ message completes. A matching fence that minted no revision (byte-identical
 re-emission) collapses to an "unchanged" chip. Non-matching fences are
 ordinary code blocks, always.
 
+**Response chrome is Streamdown's, made functional — copy yes, download
+no.** Everything a response renders beyond the lifted artifact fence —
+remaining code fences, mermaid diagrams, markdown tables — carries
+Streamdown's built-in controls, trimmed to what belongs in a chat
+column: copy-to-clipboard on all three surfaces, fullscreen on mermaid
+and tables, pan/zoom on mermaid, and NO download buttons anywhere.
+Downloading a file from a chat transcript is not Variorum's shape — the
+artifact pane owns file delivery — so the download controls are
+switched off via Streamdown's `controls` prop on the single
+`<Streamdown>` instance in `MessageResponse`, not restyled or
+reimplemented. Two decisions this forced. First, Streamdown styles its
+components with Tailwind utility class names and relies on the HOST
+app's Tailwind build to generate them — its own stylesheet ships only
+keyframes. So `src/index.css` carries an `@source` directive pointing
+Tailwind at Streamdown's dist. Without it, a control's class exists
+only if first-party code happens to use the same utility; that is how
+the controls originally shipped broken — the action bar wrapper's
+pointer-events-disabling utility was generated (shadcn components use
+it) while the inner re-enabling utility was not, leaving every button
+visible, enabled, and unclickable. The directive is the single
+mechanism; no per-control wiring exists anywhere. (Do not spell bare
+Tailwind class tokens in prose anywhere in this repo: the heuristic
+source scan reads markdown too, and a class name written in
+documentation silently enters the compiled CSS.) Second, the copy buttons use the async
+Clipboard API, which requires a secure context — localhost, Variorum's
+intended deployment, qualifies. The artifact fence itself never shows
+controls: it collapses to the chip (above) before any of this chrome
+matters.
+
 **Errors.** A failed request (endpoint down, CORS off) is a boundary:
 an inline error row in the transcript with a Retry that re-sends without
 re-appending the already-persisted user message.
