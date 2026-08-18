@@ -11,7 +11,13 @@
  * Nodes stay invisible until placed, so no frame ever shows the stack of
  * nodes sitting at the origin awaiting measurement.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import {
   Background,
   Controls,
@@ -60,6 +66,17 @@ const edgeTypes: EdgeTypes = {
 const PARSE_ERROR_HEADING = "This artifact isn't valid YAML";
 const VIEWPORT_SAVE_DELAY_MS = 150;
 const HIDDEN = { visibility: 'hidden' } as const;
+
+// React Flow's controls only follow a `dark` class on its own container,
+// not the app's <html> one — mapping its variables onto the theme tokens
+// keeps them legible in both themes.
+const FLOW_THEME = {
+  '--xy-controls-button-background-color': 'var(--card)',
+  '--xy-controls-button-background-color-hover': 'var(--accent)',
+  '--xy-controls-button-color': 'var(--card-foreground)',
+  '--xy-controls-button-color-hover': 'var(--accent-foreground)',
+  '--xy-controls-button-border-color': 'var(--border)',
+} as CSSProperties;
 
 interface FlowGraph {
   nodes: Node[];
@@ -171,6 +188,7 @@ export default function LinkmlGraphViewer({ content, context }: EditorProps) {
       </div>
       <div className="min-h-0 flex-1">
         <ReactFlow
+          style={FLOW_THEME}
           nodes={view.nodes}
           edges={view.edges}
           nodeTypes={nodeTypes}
