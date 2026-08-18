@@ -323,6 +323,14 @@ export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 const streamdownPlugins = { cjk, code, math, mermaid };
 
+// The artifact pane owns file delivery, so responses copy but never
+// download (DESIGN.md "Chat").
+const streamdownControls = {
+  code: { copy: true, download: false },
+  mermaid: { copy: true, download: false, fullscreen: true, panZoom: true },
+  table: { copy: true, download: false, fullscreen: true },
+};
+
 export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (
     <Streamdown
@@ -330,6 +338,7 @@ export const MessageResponse = memo(
         "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className
       )}
+      controls={streamdownControls}
       plugins={streamdownPlugins}
       {...props}
     />

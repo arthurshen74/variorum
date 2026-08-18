@@ -9,13 +9,14 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 ## Groups
 
 ### G1 — response chrome
+
 - Intent: make Streamdown's copy/fullscreen controls functional and
   remove its download controls (see spec)
 - Write scope: src/index.css, src/components/ai-elements/message.tsx
 - Tests: e2e/response-chrome.spec.ts — filters: npx vitest run -t "[G1]"
   (no unit tests; runs zero) / npx playwright test --grep "\[G1\]"
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-08-18)
 
 ## Order
 
@@ -37,4 +38,3 @@ Operational notes for the implementing run:
   CSS (the why lives in the spec section).
 
 ## Amendments
-

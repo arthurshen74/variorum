@@ -4,6 +4,11 @@
 @import "streamdown/styles.css";
 @import "@fontsource-variable/geist";
 
+/* Streamdown names Tailwind utilities in its dist and ships no CSS for
+ * them; without this scan source its controls render unstyled and
+ * unclickable (DESIGN.md "Chat"). */
+@source "../node_modules/streamdown/dist";
+
 /* THE theming file (DESIGN.md "UI"): shadcn-convention tokens. Tune the
  * look here — nowhere else. `npx shadcn init` on your machine will merge
  * its own token block; keep one copy. */
