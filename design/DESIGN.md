@@ -612,6 +612,28 @@ unsaved draft state never reaches a request. This keeps slider-fiddling from
 minting a pile of versions nothing ever used, while preserving the rule that
 any saved change bumps the version.
 
+**The artifact fence marker — what a system prompt must teach.** The
+extractor prefers a fence marked `artifact` (see "Post-hoc extraction"
+under Chat), but the marker only appears if the prompt asks for it —
+prompts are configuration data, so this is authoring guidance, not
+app-injected text. A system prompt for an artifact-producing
+configuration should include, adapted to its artifact type:
+
+> Every response that creates or updates the artifact must contain
+> exactly one fenced code block marked as the artifact: open the fence
+> with the language followed by the word artifact — ```yaml artifact.
+> That fence always contains the COMPLETE artifact, never a fragment or
+> a diff. Any other code you show — examples, instance data,
+> illustrations — must use a plain fence WITHOUT the artifact marker.
+> The most recent artifact-marked fence in the conversation is the
+> current state of the artifact, whether you wrote it or the user did.
+
+The last sentence carries the edit-notice feature (see Chat): user-role
+notices embed the current artifact in a marked fence, and this line is
+what tells the model to treat it as current instead of its own earlier
+output. A model that ignores all of this degrades to last-fence-wins
+extraction — wrong exactly as often as today, never more.
+
 **Tagging.** Units and responses both point at configurations, at different
 granularities:
 
@@ -760,8 +782,16 @@ Variorum's artifact is a file destined for the editor pane, and nobody
 cares whether it lands mid-stream or two seconds later. Post-hoc
 extraction is a pure function (`domain/extract.ts`), fully testable, with
 no split-chunk edge cases: the configuration's `artifactType` is the fence
-language, the LAST matching fence wins (a response showing intermediate
-attempts ends with the final artifact), and no match means no revision.
+language, and no match means no revision. Among matching fences, one
+MARKED as the artifact wins: a fence whose info string carries the word
+`artifact` after the language (```yaml artifact). Among marked fences the
+last wins; when NO fence is marked, the last matching fence wins — the
+original heuristic, now the fallback. The heuristic alone proved wrong in
+practice: a response containing a schema fence followed by an
+example-instance fence (both legitimately ```yaml) lifted the example.
+The marker is a positive contract the system prompt teaches the model
+(see "The artifact fence marker" under Configurations); when a model
+ignores it, behavior degrades exactly to the old heuristic, never worse.
 
 **The exchange, end to end.**
 
@@ -847,6 +877,61 @@ Clipboard API, which requires a secure context — localhost, Variorum's
 intended deployment, qualifies. The artifact fence itself never shows
 controls: it collapses to the chip (above) before any of this chrome
 matters.
+
+**Manual edits enter the conversation — the edit notice.** Requests are
+built solely from the persisted message history, but a manual save (or a
+restore, which IS a manual save) mints an artifact revision and no
+message — so the model kept reasoning from the last fence it emitted,
+blind to the user's edits, and its next response would silently build on
+(and re-emit) the pre-edit state. The fix: manual edits enter the record
+as a message. At the next send, if the unit's latest revision has source
+`manual` and no edit notice already points at it, the repository appends
+a user-role **edit notice** immediately before the user's own message —
+one atomic document write, both messages part of that same request. The
+notice content is a fixed template: a short line stating the user
+modified the artifact, then the full current artifact in a fence marked
+with the artifact marker (```yaml artifact — the same convention the
+extractor prefers, so "the last marked fence is current" holds for the
+model regardless of who authored it).
+
+Lazy minting is the point: three manual saves between chat turns mint
+three revisions but ONE notice, carrying only the end state. A
+byte-identical manual save already no-ops in `saveManualEdit`, so a
+notice is only ever minted for a real divergence. Once sent, the notice
+is not re-minted on later sends (it already points at the latest manual
+revision); a further edit mints a further revision, and the next send
+notices that one.
+
+`Message` gains two optional fields: `kind` (`editNotice`; absent means
+an ordinary chat message) and `artifactVersion` (the revision designator
+the notice carries). The pointer runs message → revision, the REVERSE of
+`Artifact.messageIndex`, because the manual revision exists before the
+notice does and history is append-only — backfilling a pointer onto a
+persisted revision would be rewriting it. `kind` is a discriminator, not
+content-sniffing: the transcript renders a notice collapsed to a chip
+("You edited → revision N", resolved via `artifactVersion`) without
+parsing the message text. The artifact bytes are deliberately duplicated
+between the notice content and the revision: messages ARE the request
+context and must be self-describing.
+
+Two alternatives were rejected. Request-time injection — splicing a
+synthetic message into the outgoing request without persisting it —
+would mean the record no longer reproduces the request; every provenance
+property (version tags, export completeness, import byte-equality)
+silently gains an asterisk. This is now an invariant (CLAUDE.md): what
+is sent is exactly what is persisted. An assistant-role notice was
+rejected because it misattributes authorship in a provenance system: it
+would wear a configVersion tag asserting a config produced text no model
+emitted, blur the `llm`/`manual` revision-source distinction in every
+display, and — worse behaviorally — present the model with an
+unexplained self-contradiction of its own prior prose, which models
+tend to "correct" by reverting the edit. A user-role notice is simply
+true, and gives the model a causal story it respects.
+
+Accepted consequences, same ledger as `reasoning`: the hand-written dump
+validator learns both fields by hand, and they join import-merge
+byte-equality — correctly, since two histories differing in a notice are
+different conversations.
 
 **Errors.** A failed request (endpoint down, CORS off) is a boundary:
 an inline error row in the transcript with a Retry that re-sends without

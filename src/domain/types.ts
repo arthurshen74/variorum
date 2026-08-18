@@ -6,6 +6,7 @@
  */
 export type {
   MessageRole,
+  MessageKind,
   ArtifactSource,
   Configuration,
   ConfigurationVersion,

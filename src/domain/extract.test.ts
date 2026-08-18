@@ -84,3 +84,38 @@ describe('[G1] partitionResponse', () => {
     }
   });
 });
+
+describe('[G1] marked fence preference', () => {
+  it('a marked fence beats a later unmarked one — the schema-then-example response', () => {
+    const text =
+      'Schema:\n```yaml artifact\nclasses: {}\n```\nExample:\n```yaml\nname: Ada\n```\n';
+    expect(extractArtifact(text, 'yaml')).toBe('classes: {}\n');
+  });
+
+  it('among several marked fences the last wins', () => {
+    const text =
+      '```yaml artifact\na: 1\n```\n```yaml artifact\nb: 2\n```\n```yaml\nc: 3\n```';
+    expect(extractArtifact(text, 'yaml')).toBe('b: 2\n');
+  });
+
+  it('the marker is the whole word artifact — artifactx does not count', () => {
+    const text =
+      '```yaml artifact\na: 1\n```\n```yaml artifactx\nb: 2\n```\n```yaml\nc: 3\n```';
+    expect(extractArtifact(text, 'yaml')).toBe('a: 1\n');
+  });
+
+  it('a marked fence of another language neither wins nor disturbs the preference', () => {
+    const text =
+      '```yaml artifact\na: 1\n```\n```json artifact\n{"b": 2}\n```\n```yaml\nc: 3\n```';
+    expect(extractArtifact(text, 'yaml')).toBe('a: 1\n');
+  });
+
+  it('partition splits around the marked fence; the later unmarked fence stays in after', () => {
+    const text =
+      'Schema:\n```yaml artifact\nclasses: {}\n```\nExample:\n```yaml\nname: Ada\n```\n';
+    const result = partitionResponse(text, 'yaml');
+    expect(result.before).toBe('Schema:\n');
+    expect(result.artifact).toBe('classes: {}\n');
+    expect(result.after).toBe('\nExample:\n```yaml\nname: Ada\n```\n');
+  });
+});

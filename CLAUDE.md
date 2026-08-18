@@ -173,6 +173,11 @@ surface is `design/repository-api.ts`):
   store, never persisted, never in a request.
 - Streaming chat state lives in the AI SDK's `useChat`; it is committed to
   the unit via the repository only when a response completes.
+- The request context is exactly the unit's persisted message history
+  (reasoning stripped) plus the config's system prompt. Synthetic context
+  — e.g. the manual-edit notice — is persisted as a real message BEFORE
+  the request is built; nothing is ever spliced into a request that is
+  not in the record.
 
 LLM tool surface:
 

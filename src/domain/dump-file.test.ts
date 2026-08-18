@@ -454,3 +454,42 @@ describe('[G1] parseDump — boundary discipline', () => {
     ]);
   });
 });
+
+describe('[G2] parseDump — edit-notice fields', () => {
+  const noticeMessage = (over: Json = {}): Json =>
+    message({
+      kind: 'editNotice',
+      artifactVersion: 1,
+      content: 'notice body',
+      ...over,
+    });
+
+  it('round-trips kind and artifactVersion through serialize and parse', () => {
+    const text = dumpText({ units: [unit({ messages: [noticeMessage()] })] });
+    const parsed = parseDump(text);
+    expect(parsed.units[0]?.messages[0]).toMatchObject({
+      kind: 'editNotice',
+      artifactVersion: 1,
+    });
+    expect(parseDump(serializeDump(parsed))).toEqual(parsed);
+  });
+
+  it('rejects an unknown kind, naming the path', () => {
+    const text = dumpText({
+      units: [unit({ messages: [noticeMessage({ kind: 'weird' })] })],
+    });
+    expect(() => parseDump(text)).toThrow(/units\[0\]\.messages\[0\]\.kind/);
+  });
+
+  it('rejects artifactVersion without kind', () => {
+    const stray = message({ artifactVersion: 1 });
+    const text = dumpText({ units: [unit({ messages: [stray] })] });
+    expect(() => parseDump(text)).toThrow(/artifactVersion/);
+  });
+
+  it('rejects kind without artifactVersion', () => {
+    const bare = message({ kind: 'editNotice' });
+    const text = dumpText({ units: [unit({ messages: [bare] })] });
+    expect(() => parseDump(text)).toThrow(/artifactVersion/);
+  });
+});

@@ -143,6 +143,7 @@ function UnitChat({ unit, artifactType }: UnitChatProps) {
                 }
                 artifactType={artifactType}
                 revisionVersion={revision?.version ?? null}
+                editNoticeVersion={null}
                 isStreaming={
                   status === 'streaming' && index === messages.length - 1
                 }

@@ -44,6 +44,17 @@ enums:
       manual:
         description: An explicit human save of a manual edit.
 
+  MessageKind:
+    description: >-
+      Marks messages the app minted rather than a human typed. Absent on
+      ordinary chat messages.
+    permissible_values:
+      editNotice:
+        description: >-
+          User-role message minted at the send after a manual save,
+          carrying the current artifact so the model sees the edit
+          (DESIGN.md "Manual edits enter the conversation").
+
 classes:
 
   Database:
@@ -209,6 +220,16 @@ classes:
           Assistant messages only — chain-of-thought content the model
           returned separately with this response. Part of the record,
           never sent back as context in later requests (DESIGN.md "Chat").
+      kind:
+        description: editNotice messages only.
+        range: MessageKind
+      artifactVersion:
+        description: >-
+          editNotice messages only — the revision designator the notice
+          carries. Points message → revision, the reverse of
+          Artifact.messageIndex, because the manual revision exists before
+          the notice does and append-only history cannot be backfilled.
+        range: integer
       content:
         required: true
 

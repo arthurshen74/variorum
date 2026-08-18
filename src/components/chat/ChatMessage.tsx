@@ -30,6 +30,11 @@ export interface ChatMessageProps {
    * matching fence present means the "unchanged" chip.
    */
   revisionVersion: number | null;
+  /**
+   * Set when the persisted message is an edit notice — the whole message
+   * renders as the collapsed "You edited" chip.
+   */
+  editNoticeVersion: number | null;
   isStreaming: boolean;
 }
 

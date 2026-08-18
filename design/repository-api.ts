@@ -57,6 +57,8 @@
 
 export type MessageRole = 'user' | 'assistant';
 export type ArtifactSource = 'llm' | 'manual';
+/** Absent kind = ordinary chat message. */
+export type MessageKind = 'editNotice';
 
 export interface Configuration {
   name: string; // PK
@@ -82,6 +84,8 @@ export interface Message {
   sentAt: string; // ISO datetime
   receivedFinishedAt?: string; // assistant only
   reasoning?: string; // assistant only; never re-sent as request context
+  kind?: MessageKind; // editNotice only
+  artifactVersion?: number; // editNotice only: the revision designator the notice carries
   content: string;
 }
 
@@ -209,6 +213,12 @@ export interface VariorumRepository {
    * configVersion to the latest SAVED version of the unit's configuration
    * at send time. This is where "generation always uses the latest saved
    * version" is enforced; callers cannot pick a version.
+   *
+   * If the unit's latest revision has source 'manual' and no edit notice
+   * points at it yet (domain/edit-notice.ts decides), an editNotice
+   * message is appended immediately BEFORE the user's message, in the
+   * same atomic document write (DESIGN.md "Manual edits enter the
+   * conversation").
    */
   appendUserMessage(unitId: string, content: string): Promise<Unit>;
 
