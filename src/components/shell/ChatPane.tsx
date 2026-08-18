@@ -21,6 +21,7 @@ import {
   PromptInputTextarea,
 } from '@/components/ai-elements/prompt-input';
 import { ChatMessage } from '@/components/chat/ChatMessage';
+import { EDIT_NOTICE_KIND } from '@/domain/edit-notice';
 import { extractArtifact } from '@/domain/extract';
 import type { Unit } from '@/domain/types';
 import { completionFromUIMessage, toUIMessages } from '@/llm/mapping';
@@ -143,7 +144,11 @@ function UnitChat({ unit, artifactType }: UnitChatProps) {
                 }
                 artifactType={artifactType}
                 revisionVersion={revision?.version ?? null}
-                editNoticeVersion={null}
+                editNoticeVersion={
+                  persisted?.kind === EDIT_NOTICE_KIND
+                    ? (persisted.artifactVersion ?? null)
+                    : null
+                }
                 isStreaming={
                   status === 'streaming' && index === messages.length - 1
                 }
@@ -184,7 +189,11 @@ function UnitChat({ unit, artifactType }: UnitChatProps) {
           onSubmit={async ({ text }) => {
             if (text.trim() === '') return;
             // Durable before any network is touched.
-            await repository.appendUserMessage(unit.id, text);
+            const updated = await repository.appendUserMessage(unit.id, text);
+            // What is sent is exactly what is persisted: re-seed from the
+            // record, which may have gained an edit notice ahead of this
+            // message. The trailing entry is the message sendMessage appends.
+            setMessages(toUIMessages(updated.messages.slice(0, -1)));
             sentAt.current = new Date().toISOString();
             void sendMessage({ text });
           }}

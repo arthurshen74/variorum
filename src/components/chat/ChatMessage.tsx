@@ -19,6 +19,7 @@ import {
 } from '@/components/ai-elements/reasoning';
 import { partitionResponse } from '@/domain/extract';
 import { ArtifactChip } from './ArtifactChip';
+import { EditNoticeChip } from './EditNoticeChip';
 
 export interface ChatMessageProps {
   message: UIMessage;
@@ -57,8 +58,21 @@ export function ChatMessage({
   versionTag,
   artifactType,
   revisionVersion,
+  editNoticeVersion,
   isStreaming,
 }: ChatMessageProps): ReactElement {
+  // A notice carries the whole artifact as request context; the transcript
+  // shows the chip and nothing else.
+  if (editNoticeVersion !== null) {
+    return (
+      <Message from={message.role}>
+        <MessageContent>
+          <EditNoticeChip artifactVersion={editNoticeVersion} />
+        </MessageContent>
+      </Message>
+    );
+  }
+
   const reasoning = joinReasoning(message);
   const text = joinText(message);
   // Nothing is THE artifact until the message completes, so a fence still

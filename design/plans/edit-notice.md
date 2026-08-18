@@ -59,7 +59,7 @@ red because they assert today's behavior.
 - Tests: e2e/edit-notice.spec.ts — filters:
   npx playwright test e2e/edit-notice.spec.ts
 - Depends on: G1, G2
-- Status: RED
+- Status: GREEN (2026-08-18)
 
 ## Order
 
