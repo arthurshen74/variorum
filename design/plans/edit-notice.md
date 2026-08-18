@@ -35,7 +35,7 @@ red because they assert today's behavior.
   npx vitest run src/domain/extract.test.ts src/domain/edit-notice.test.ts /
   npx playwright test e2e/marked-fence.spec.ts
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-08-18)
 
 ### G2 — persistence: notice minting + dump validator
 - Intent: appendUserMessage mints the pending notice atomically before

@@ -4,11 +4,20 @@
  * fence language — a `linkml` configuration with artifactType "yaml" means
  * we lift ```yaml fences.
  *
- * If the response contains several matching fences, the LAST one wins: a
- * response that shows intermediate attempts ends with the final artifact.
+ * Among matching fences, one MARKED as the artifact wins: a fence whose
+ * info string carries the marker word after the language. Among marked
+ * fences the last wins; when none is marked the last matching fence wins.
  * Returns null when no matching fence exists (the response didn't change
  * the artifact — no revision is captured; see DESIGN.md "Revision history").
  */
+
+/** The word a fence's info string carries to declare itself the artifact. */
+export const ARTIFACT_FENCE_MARKER = 'artifact';
+
+const MARKED_INFO = new RegExp(
+  `(?:^|\\s)${ARTIFACT_FENCE_MARKER}(?:\\s|$)`,
+);
+
 export function extractArtifact(
   responseText: string,
   artifactType: string,
@@ -19,10 +28,10 @@ export function extractArtifact(
 /**
  * The transcript-side split (DESIGN.md "Chat"): prose before the lifted
  * fence, the artifact itself, prose after — the chip renders in between.
- * Only the LAST matching fence (the lifted one) is removed from the
- * prose; earlier matching fences stay in `before` as ordinary code
- * blocks. `artifact` always equals extractArtifact for the same input;
- * when it is null, `before` is the whole text and `after` is empty.
+ * Only the lifted fence is removed from the prose; every other matching
+ * fence stays in `before` or `after` as an ordinary code block.
+ * `artifact` always equals extractArtifact for the same input; when it is
+ * null, `before` is the whole text and `after` is empty.
  */
 export interface PartitionedResponse {
   before: string;
@@ -35,17 +44,25 @@ export function partitionResponse(
   artifactType: string,
 ): PartitionedResponse {
   const escaped = artifactType.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const fence = new RegExp('```' + escaped + '[^\\n]*\\n([\\s\\S]*?)```', 'g');
+  const fence = new RegExp(
+    '```' + escaped + '([^\\n]*)\\n([\\s\\S]*?)```',
+    'g',
+  );
   let last: RegExpExecArray | null = null;
+  let lastMarked: RegExpExecArray | null = null;
   for (const match of responseText.matchAll(fence)) {
     last = match;
+    if (MARKED_INFO.test(match[1] ?? '')) {
+      lastMarked = match;
+    }
   }
-  if (last === null) {
+  const lifted = lastMarked ?? last;
+  if (lifted === null) {
     return { before: responseText, artifact: null, after: '' };
   }
   return {
-    before: responseText.slice(0, last.index),
-    artifact: last[1] ?? null,
-    after: responseText.slice(last.index + last[0].length),
+    before: responseText.slice(0, lifted.index),
+    artifact: lifted[2] ?? null,
+    after: responseText.slice(lifted.index + lifted[0].length),
   };
 }
