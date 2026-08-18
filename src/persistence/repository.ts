@@ -24,6 +24,11 @@ import type {
 import { SCHEMA_VERSION } from '@/domain/types';
 import { assertValidDump, planMerge } from '@/domain/merge';
 import {
+  EDIT_NOTICE_KIND,
+  editNoticeContent,
+  pendingEditNotice,
+} from '@/domain/edit-notice';
+import {
   clearAndPutMany,
   deleteByKey,
   getAll,
@@ -178,16 +183,33 @@ class Repository implements VariorumRepository {
     return this.enqueue(async () => {
       const unit = this.getUnit(unitId);
       const version = this.latestVersion(unit.configName);
-      const message: Message = {
+      const messages = [...unit.messages];
+
+      const pending = pendingEditNotice(unit);
+      if (pending !== null) {
+        const config = variorumStore
+          .getState()
+          .configurations.find((c) => c.name === unit.configName);
+        if (config === undefined) {
+          throw new Error(`unknown configuration: ${unit.configName}`);
+        }
+        messages.push({
+          role: 'user',
+          configVersion: version.version,
+          sentAt: nowIso(),
+          kind: EDIT_NOTICE_KIND,
+          artifactVersion: pending.version,
+          content: editNoticeContent(config.artifactType, pending.content),
+        });
+      }
+
+      messages.push({
         role: 'user',
         configVersion: version.version,
         sentAt: nowIso(),
         content,
-      };
-      return this.writeUnit({
-        ...unit,
-        messages: [...unit.messages, message],
       });
+      return this.writeUnit({ ...unit, messages });
     });
   }
 

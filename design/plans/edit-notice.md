@@ -47,7 +47,7 @@ red because they assert today's behavior.
   src/domain/dump-file.test.ts (new describe) — filters:
   npx vitest run src/persistence/repository.chat.test.ts src/domain/dump-file.test.ts -t "edit-notice"
 - Depends on: G1
-- Status: RED
+- Status: GREEN (2026-08-18)
 
 ### G3 — components: send-path wiring + chip
 - Intent: ChatPane gets the minted notice into the request it sends and

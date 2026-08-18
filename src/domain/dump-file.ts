@@ -18,6 +18,7 @@ import type {
   ConfigurationVersion,
   DatabaseDump,
   Message,
+  MessageKind,
   MessageRole,
   Unit,
 } from './types';
@@ -33,6 +34,7 @@ const ROOT_PATH = 'dump';
 
 const MESSAGE_ROLES: readonly MessageRole[] = ['user', 'assistant'];
 const ARTIFACT_SOURCES: readonly ArtifactSource[] = ['llm', 'manual'];
+const MESSAGE_KINDS: readonly MessageKind[] = ['editNotice'];
 
 type Json = Record<string, unknown>;
 
@@ -142,6 +144,13 @@ function parseMessage(value: unknown, path: string): Message {
   const record = objectAt(value, path);
   const receivedFinishedAt = optionalString(record, 'receivedFinishedAt', path);
   const reasoning = optionalString(record, 'reasoning', path);
+  const kind = optionalEnum(record, 'kind', MESSAGE_KINDS, path);
+  const artifactVersion = optionalInteger(record, 'artifactVersion', path);
+  // The pair is the notice: a kind with nothing to point at, or a pointer
+  // with no kind, is a message no writer of ours could have produced.
+  if ((kind === undefined) !== (artifactVersion === undefined)) {
+    fail(`${path}.artifactVersion`, 'and kind must be set together');
+  }
   return {
     role: requiredEnum(record, 'role', MESSAGE_ROLES, path),
     configVersion: requiredInteger(record, 'configVersion', path),
@@ -149,6 +158,8 @@ function parseMessage(value: unknown, path: string): Message {
     content: requiredString(record, 'content', path),
     ...(receivedFinishedAt !== undefined && { receivedFinishedAt }),
     ...(reasoning !== undefined && { reasoning }),
+    ...(kind !== undefined && { kind }),
+    ...(artifactVersion !== undefined && { artifactVersion }),
   };
 }
 
@@ -239,6 +250,16 @@ function requiredInteger(record: Json, key: string, path: string): number {
   return value;
 }
 
+function optionalInteger(
+  record: Json,
+  key: string,
+  path: string,
+): number | undefined {
+  return record[key] === undefined
+    ? undefined
+    : requiredInteger(record, key, path);
+}
+
 function requiredBoolean(record: Json, key: string, path: string): boolean {
   const value = record[key];
   if (typeof value !== 'boolean') {
@@ -258,4 +279,15 @@ function requiredEnum<T extends string>(
     fail(`${path}.${key}`, `must be one of: ${allowed.join(', ')}`);
   }
   return value as T;
+}
+
+function optionalEnum<T extends string>(
+  record: Json,
+  key: string,
+  allowed: readonly T[],
+  path: string,
+): T | undefined {
+  return record[key] === undefined
+    ? undefined
+    : requiredEnum(record, key, allowed, path);
 }
