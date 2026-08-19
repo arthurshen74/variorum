@@ -68,9 +68,25 @@ export const TRUNCATED_RESPONSE_MESSAGE =
  * The finish chunk is dropped so the message never finalizes as a success.
  */
 export function failOnTruncation(
-  _stream: ReadableStream<UIMessageChunk>,
+  stream: ReadableStream<UIMessageChunk>,
 ): ReadableStream<UIMessageChunk> {
-  throw new Error('not implemented: failOnTruncation');
+  return stream.pipeThrough(
+    new TransformStream<UIMessageChunk, UIMessageChunk>({
+      transform(chunk, controller) {
+        if (
+          chunk.type === 'finish' &&
+          chunk.finishReason === FINISH_REASON_LENGTH
+        ) {
+          controller.enqueue({
+            type: 'error',
+            errorText: TRUNCATED_RESPONSE_MESSAGE,
+          });
+          return;
+        }
+        controller.enqueue(chunk);
+      },
+    }),
+  );
 }
 
 export interface ChatTransportDeps {
@@ -109,14 +125,16 @@ export class VariorumChatTransport implements ChatTransport<UIMessage> {
     });
 
     return Promise.resolve(
-      toUIMessageStream({
-        stream: result.stream,
-        // There is no server here to leak internals to — the endpoint is
-        // the user's own, and the error row is only useful if it names
-        // the failure.
-        onError: (error) =>
-          error instanceof Error ? error.message : String(error),
-      }),
+      failOnTruncation(
+        toUIMessageStream({
+          stream: result.stream,
+          // There is no server here to leak internals to — the endpoint is
+          // the user's own, and the error row is only useful if it names
+          // the failure.
+          onError: (error) =>
+            error instanceof Error ? error.message : String(error),
+        }),
+      ),
     );
   }
 

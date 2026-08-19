@@ -37,7 +37,7 @@ no existing test changed behavior:
   npx vitest run src/llm/chat-transport.test.ts /
   npx playwright test e2e/truncated-response.spec.ts
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-08-19)
 
 ## Order
 
