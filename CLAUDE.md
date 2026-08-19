@@ -123,7 +123,8 @@ Data model:
   independently.
 - Artifact revisions are captured on each completed LLM response that changes
   the artifact and on each explicit manual save — no debounced autosave
-  revisions.
+  revisions. A response the server cut short (`finish_reason: length`) is a
+  FAILED request, not a completed one: nothing is persisted from it.
 - Deletion is **soft** everywhere (archived flag). The system's ONLY true
   deletes are two interface-only operations. Prune deletes archived units
   only, never configurations, and REQUIRES a fresh export: the repository

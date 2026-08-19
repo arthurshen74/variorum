@@ -827,6 +827,41 @@ response is never extracted from — revisions come from completed
 responses only, per Persistence & Data Model. Switching units mid-stream
 is a cancel with the same semantics.
 
+**Truncation discards, too.** Variorum sends no output cap — no
+`max_tokens` on the wire, and no field for one in the configuration
+recipe. The window belongs to the server and the user's model-load
+settings, where prompt and completion share one budget; a cap in the app
+would be a second, invisible limit competing with the real one for no
+gain.
+
+So when the server ends a stream with `finish_reason: length`, the
+response is classified as a FAILED request, not a completed one, and
+takes the error path below. Nothing is persisted — no assistant message,
+no revision — the partial text leaves the display, and the user message
+stays, exactly as a cancel. The error row names the cause and the fix,
+because a bare "request failed" would send the user hunting for a network
+problem that isn't there.
+
+Keeping the partial text was considered and rejected on three counts. A
+truncated response can carry a CLOSED artifact fence when the cut falls
+after it, so the extractor would happily mint a revision from output the
+model never finished — and a bad revision is indistinguishable from a
+good one forever, exported and imported as truth. A persisted
+half-sentence assistant turn would also re-enter the request context on
+every later turn, feeding the same pressure that caused the truncation.
+And recording it would cost a new persisted `Message` field, the
+hand-written dump validator learning it, and import byte-equality gaining
+it — real, permanent cost for a record of something that did not happen.
+
+The mechanism is one place: the transport is the only code that sees a
+finish reason, and it converts a `length` finish into an error chunk on
+the UI message stream. Everything downstream — discard-on-error, the
+error row, Retry — already exists and is untouched, which is the point:
+truncation is not a new failure mode, it is an existing one the system
+could not previously see. Retry re-sends unchanged, which is honest (a
+shorter answer may fit); the durable fix is raising the server's context
+length, and the message says so.
+
 **Reasoning is persisted.** `Message` gains an optional `reasoning` field
 (assistant messages, when the model returned separate reasoning content).
 Variorum's identity is provenance — the chain of thought that produced
@@ -933,9 +968,10 @@ validator learns both fields by hand, and they join import-merge
 byte-equality — correctly, since two histories differing in a notice are
 different conversations.
 
-**Errors.** A failed request (endpoint down, CORS off) is a boundary:
-an inline error row in the transcript with a Retry that re-sends without
-re-appending the already-persisted user message.
+**Errors.** A failed request (endpoint down, CORS off, or a truncated
+response — see above) is a boundary: an inline error row in the
+transcript with a Retry that re-sends without re-appending the
+already-persisted user message.
 
 **Deferred, deliberately.** Wiring the model's four tools into the chat
 loop is its own follow-up slice: it needs multi-step streaming, tool-call

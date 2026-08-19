@@ -24,6 +24,8 @@ export interface ScriptedResponse {
   chunks?: Chunk[];
   /** Keep the stream open after the chunks; finish via release(). */
   holdOpen?: boolean;
+  /** OpenAI finish_reason on the closing event; 'length' means truncated. */
+  finishReason?: string;
 }
 
 const CORS_HEADERS = {
@@ -48,6 +50,7 @@ export class MockLlm {
   private server: Server | undefined;
   private script: ScriptedResponse[] = [];
   private held: ServerResponse | undefined;
+  private heldFinishReason: string | undefined;
   /** Parsed JSON bodies of every completion request, in order. */
   readonly requests: Record<string, unknown>[] = [];
   /** Headers of every completion request, in order (names lowercased by node). */
@@ -112,9 +115,10 @@ export class MockLlm {
     }
     if (scripted.holdOpen === true) {
       this.held = res;
+      this.heldFinishReason = scripted.finishReason;
       return;
     }
-    this.finish(res);
+    this.finish(res, scripted.finishReason);
   }
 
   /** Finish a held stream, optionally emitting more chunks first. */
@@ -126,11 +130,11 @@ export class MockLlm {
       const { delayMs: _delayMs, ...delta } = chunk;
       res.write(sseEvent(delta, null));
     }
-    this.finish(res);
+    this.finish(res, this.heldFinishReason);
   }
 
-  private finish(res: ServerResponse): void {
-    res.write(sseEvent({}, 'stop'));
+  private finish(res: ServerResponse, reason = 'stop'): void {
+    res.write(sseEvent({}, reason));
     res.write('data: [DONE]\n\n');
     res.end();
   }

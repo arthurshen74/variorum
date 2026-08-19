@@ -47,6 +47,32 @@ function withExtraBodyFields(
   };
 }
 
+// The OpenAI-compatible finish reason for a response the server cut short.
+// Exported so the tests that script an endpoint name it from here.
+export const FINISH_REASON_LENGTH = 'length';
+
+/**
+ * Shown in the transcript's error row. Names the symptom, not a cause:
+ * `length` means the server's limits ended the response, and the finish
+ * reason alone cannot say whether that was the context window or an
+ * output cap.
+ */
+export const TRUNCATED_RESPONSE_MESSAGE =
+  "The response was cut short by the server's limits and was discarded. " +
+  'Nothing was saved. Raise the context length (or output limit) on your ' +
+  'LLM server, then retry.';
+
+/**
+ * Converts a `length` finish into an error chunk: a response the server
+ * cut short is a failed request, not a completed one (DESIGN.md "Chat").
+ * The finish chunk is dropped so the message never finalizes as a success.
+ */
+export function failOnTruncation(
+  _stream: ReadableStream<UIMessageChunk>,
+): ReadableStream<UIMessageChunk> {
+  throw new Error('not implemented: failOnTruncation');
+}
+
 export interface ChatTransportDeps {
   /** Injectable for node tests; defaults to global fetch. */
   fetchImpl?: typeof fetch;

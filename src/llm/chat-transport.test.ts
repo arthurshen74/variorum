@@ -9,7 +9,12 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { UIMessage, UIMessageChunk } from 'ai';
-import { VariorumChatTransport } from './chat-transport';
+import {
+  FINISH_REASON_LENGTH,
+  TRUNCATED_RESPONSE_MESSAGE,
+  VariorumChatTransport,
+  failOnTruncation,
+} from './chat-transport';
 import { variorumStore } from '@/state/store';
 import type { ConfigurationVersion } from '@/domain/types';
 
@@ -59,7 +64,7 @@ type Captured = {
   signal: AbortSignal | undefined;
 };
 
-function sseBody(deltas: Record<string, unknown>[]): string {
+function sseBody(deltas: Record<string, unknown>[], finish = 'stop'): string {
   const events = [
     ...deltas.map((delta) =>
       JSON.stringify({
@@ -75,13 +80,13 @@ function sseBody(deltas: Record<string, unknown>[]): string {
       object: 'chat.completion.chunk',
       created: 0,
       model: 'test-model',
-      choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
+      choices: [{ index: 0, delta: {}, finish_reason: finish }],
     }),
   ];
   return events.map((e) => `data: ${e}\n\n`).join('') + 'data: [DONE]\n\n';
 }
 
-function scriptedFetch(deltas: Record<string, unknown>[]) {
+function scriptedFetch(deltas: Record<string, unknown>[], finish = 'stop') {
   const calls: Captured[] = [];
   const fetchImpl = (async (
     input: string | URL | Request,
@@ -92,7 +97,7 @@ function scriptedFetch(deltas: Record<string, unknown>[]) {
       body: JSON.parse(String(init?.body)) as Record<string, unknown>,
       signal: init?.signal ?? undefined,
     });
-    return new Response(sseBody(deltas), {
+    return new Response(sseBody(deltas, finish), {
       status: 200,
       headers: { 'content-type': 'text/event-stream' },
     });
@@ -233,5 +238,135 @@ describe('[G3] VariorumChatTransport', () => {
     expect(captured?.aborted).toBe(false);
     controller.abort();
     expect(captured?.aborted).toBe(true);
+  });
+});
+
+/**
+ * [G1] Truncation (DESIGN.md "Truncation discards, too"): a response the
+ * server cut short is a FAILED request, not a completed one. The
+ * transport is the only code that sees a finish reason, so it is the only
+ * place that makes this call.
+ */
+function chunkStream(
+  chunks: UIMessageChunk[],
+): ReadableStream<UIMessageChunk> {
+  return new ReadableStream<UIMessageChunk>({
+    start(controller) {
+      for (const chunk of chunks) controller.enqueue(chunk);
+      controller.close();
+    },
+  });
+}
+
+const HELLO_DELTA: UIMessageChunk = {
+  type: 'text-delta',
+  id: 't1',
+  delta: 'Hello',
+};
+
+describe('[G1] failOnTruncation', () => {
+  it('emits an error chunk when the finish reason is length', async () => {
+    const chunks = await collect(
+      failOnTruncation(
+        chunkStream([
+          { type: 'start' },
+          HELLO_DELTA,
+          { type: 'finish', finishReason: FINISH_REASON_LENGTH },
+        ]),
+      ),
+    );
+
+    expect(chunks).toContainEqual({
+      type: 'error',
+      errorText: TRUNCATED_RESPONSE_MESSAGE,
+    });
+  });
+
+  it('drops the finish chunk on truncation', async () => {
+    const chunks = await collect(
+      failOnTruncation(
+        chunkStream([
+          { type: 'start' },
+          HELLO_DELTA,
+          { type: 'finish', finishReason: FINISH_REASON_LENGTH },
+        ]),
+      ),
+    );
+
+    // A finish chunk would finalize the message as a success, and the
+    // partial would be persisted by ChatPane's onFinish.
+    expect(chunks.some((chunk) => chunk.type === 'finish')).toBe(false);
+  });
+
+  it('passes a stop finish through unchanged', async () => {
+    const source: UIMessageChunk[] = [
+      { type: 'start' },
+      HELLO_DELTA,
+      { type: 'finish', finishReason: 'stop' },
+    ];
+    const chunks = await collect(failOnTruncation(chunkStream(source)));
+
+    expect(chunks).toEqual(source);
+  });
+
+  it('passes text deltas through before the error', async () => {
+    const chunks = await collect(
+      failOnTruncation(
+        chunkStream([
+          { type: 'start' },
+          HELLO_DELTA,
+          { type: 'text-delta', id: 't1', delta: ' world' },
+          { type: 'finish', finishReason: FINISH_REASON_LENGTH },
+        ]),
+      ),
+    );
+
+    const text = chunks
+      .filter(
+        (c): c is Extract<UIMessageChunk, { type: 'text-delta' }> =>
+          c.type === 'text-delta',
+      )
+      .map((c) => c.delta)
+      .join('');
+    expect(text).toBe('Hello world');
+    expect(chunks.at(-1)).toEqual({
+      type: 'error',
+      errorText: TRUNCATED_RESPONSE_MESSAGE,
+    });
+  });
+
+  it('leaves finish reasons other than length untouched', async () => {
+    const source: UIMessageChunk[] = [
+      { type: 'start' },
+      HELLO_DELTA,
+      { type: 'finish', finishReason: 'content-filter' },
+    ];
+    const chunks = await collect(failOnTruncation(chunkStream(source)));
+
+    expect(chunks).toEqual(source);
+  });
+});
+
+describe('[G1] VariorumChatTransport — truncation', () => {
+  beforeEach(() => {
+    storage.clear();
+    seedStore([VERSION_ONE]);
+  });
+
+  it('surfaces truncation reported by the endpoint as an error chunk', async () => {
+    const { fetchImpl } = scriptedFetch(
+      [{ content: 'half a thought' }],
+      FINISH_REASON_LENGTH,
+    );
+    const transport = new VariorumChatTransport('unit-1', { fetchImpl });
+    const chunks = await collect(
+      await transport.sendMessages(sendOptions([USER_HI])),
+    );
+
+    expect(chunks).toContainEqual({
+      type: 'error',
+      errorText: TRUNCATED_RESPONSE_MESSAGE,
+    });
+    expect(chunks.some((chunk) => chunk.type === 'finish')).toBe(false);
   });
 });
