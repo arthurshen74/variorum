@@ -36,7 +36,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 - Tests: e2e/token-usage.spec.ts — filter:
   npx playwright test e2e/token-usage.spec.ts
 - Depends on: G1, G2
-- Status: RED
+- Status: GREEN (2026-08-20)
 
 ## Order
 

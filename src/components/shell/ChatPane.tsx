@@ -5,7 +5,7 @@
  * and discard-everything on cancel. The useChat instance is keyed by unit,
  * so switching units tears it down and aborts whatever was in flight.
  */
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import {
   Conversation,
@@ -26,8 +26,20 @@ import { extractArtifact } from '@/domain/extract';
 import type { Unit } from '@/domain/types';
 import { completionFromUIMessage, toUIMessages } from '@/llm/mapping';
 import { VariorumChatTransport } from '@/llm/chat-transport';
+import {
+  formatTokenReadout,
+  getCharsPerToken,
+  recordCalibration,
+  streamedChars,
+  usageFromMessage,
+  type TokenReadout,
+} from '@/llm/token-usage';
 import { repository } from '@/persistence/repository';
-import { selectConfiguration, selectUnit } from '@/state/selectors';
+import {
+  selectConfiguration,
+  selectLatestVersion,
+  selectUnit,
+} from '@/state/selectors';
 import { useVariorum } from '@/state/store';
 
 interface ChatPaneProps {
@@ -51,6 +63,16 @@ export default function ChatPane({ unitId }: ChatPaneProps) {
     ),
   );
 
+  const version = useVariorum(
+    useMemo(
+      () =>
+        unit === undefined
+          ? () => undefined
+          : selectLatestVersion(unit.configName),
+      [unit],
+    ),
+  );
+
   return (
     <aside className="flex w-96 shrink-0 flex-col border-l">
       <div className="flex h-11 shrink-0 items-center border-b px-3">
@@ -69,6 +91,7 @@ export default function ChatPane({ unitId }: ChatPaneProps) {
           key={unit.id}
           unit={unit}
           artifactType={configuration?.artifactType ?? 'text'}
+          modelName={version?.modelName ?? ''}
         />
       )}
     </aside>
@@ -78,14 +101,19 @@ export default function ChatPane({ unitId }: ChatPaneProps) {
 interface UnitChatProps {
   unit: Unit;
   artifactType: string;
+  modelName: string;
 }
 
-function UnitChat({ unit, artifactType }: UnitChatProps) {
+function UnitChat({ unit, artifactType, modelName }: UnitChatProps) {
   const transport = useMemo(
     () => new VariorumChatTransport(unit.id),
     [unit.id],
   );
   const sentAt = useRef('');
+  // The prompt side is never measured: the baseline is the previous
+  // exchange's exact total. Session-ephemeral by construction — this
+  // instance is keyed by unit and dies with a reload.
+  const [baselineTokens, setBaselineTokens] = useState<number | null>(null);
 
   const { messages, setMessages, sendMessage, regenerate, stop, status, error } =
     useChat({
@@ -107,6 +135,15 @@ function UnitChat({ unit, artifactType }: UnitChatProps) {
           completion,
           artifact ?? undefined,
         );
+        const settled = usageFromMessage(message);
+        if (settled !== null) {
+          recordCalibration(
+            settled.modelName,
+            streamedChars(message),
+            settled.usage.outputTokens,
+          );
+          setBaselineTokens(settled.usage.totalTokens);
+        }
       },
     });
 
@@ -123,6 +160,23 @@ function UnitChat({ unit, artifactType }: UnitChatProps) {
   useEffect(() => () => void stop(), [stop]);
 
   const isGenerating = status === 'submitted' || status === 'streaming';
+
+  // The exact figures live on the finish chunk's metadata, so a truncated
+  // response (finish chunk dropped) and a reload (messages rebuilt from
+  // the record) both leave the slot empty without any extra bookkeeping.
+  const last = messages.at(-1);
+  const settledUsage = last === undefined ? null : usageFromMessage(last);
+  const readout: TokenReadout = isGenerating
+    ? {
+        kind: 'estimating',
+        baselineTokens,
+        streamedChars: last?.role === 'assistant' ? streamedChars(last) : 0,
+        charsPerToken: getCharsPerToken(modelName),
+      }
+    : settledUsage !== null
+      ? { kind: 'settled', usage: settledUsage.usage }
+      : { kind: 'idle' };
+  const readoutText = formatTokenReadout(readout);
   // The record already IS the request: a trailing user turn with nothing in
   // flight is a question that was asked and never answered. A notice a
   // previous Refresh appended is user-role too, so it stays refreshable.
@@ -168,6 +222,14 @@ function UnitChat({ unit, artifactType }: UnitChatProps) {
               />
             );
           })}
+          {readoutText === '' ? null : (
+            <div
+              aria-label="Token usage"
+              className="text-xs text-muted-foreground"
+            >
+              {readoutText}
+            </div>
+          )}
           {status === 'submitted' ? (
             <div role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader />
