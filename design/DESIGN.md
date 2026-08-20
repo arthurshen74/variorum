@@ -973,6 +973,80 @@ response — see above) is a boundary: an inline error row in the
 transcript with a Retry that re-sends without re-appending the
 already-persisted user message.
 
+**Refresh — the stranded user message.** Cancel, truncation, and plain
+request failure all end the same way: the user message stays, nothing of
+the response is persisted. That leaves a unit whose last message is a
+user turn with no answer — an honest record of a question that was asked
+and never answered, and a dead end. The Retry on the error row covers
+only part of it, because that row is bound to the live `useChat` status:
+a cancel never raises it (a cancel is not an error), and any reload
+clears it while leaving the stranded message in the record. The state
+outlives the affordance.
+
+Refresh is that affordance, decoupled from the error. When the unit's
+last persisted message is a user turn and nothing is in flight, the chat
+offers to send the request again. It appends nothing and deletes
+nothing: the persisted history already IS the request, so re-sending it
+is the entire operation. Underneath, it is the same re-send as Retry —
+the difference is only in when it is offered, and the two stay separate
+rather than merging. An error row that names a cause should carry its
+own action, and Refresh should not appear beside it saying the same
+thing twice.
+
+It renders in the transcript's exchange-state slot, alongside the Loader
+and the error row, not as an action on the message row. Those three
+narrate the state of the last exchange, one component owns that state,
+and a control that belongs to the conversation's tail is not a property
+of a message.
+
+**A manual edit made while stranded rides along — appended after.** A
+failed request is exactly when a user wanders to the artifact pane and
+fixes the thing by hand. That mints a manual revision and no message, so
+a naive re-send would hand the model the original context and its own
+pre-edit fence — the blindness the edit notice exists to cure. So a
+Refresh mints the pending notice first, and appends it AFTER the
+stranded user message.
+
+After, not before, and that is the whole decision. The notice
+`appendUserMessage` mints sits immediately before the user's message
+because both are minted at one send, in one write. Here the message is
+already persisted and the edit happened afterwards; inserting a notice
+ahead of it would rewrite the record to claim the notice went out with
+the original request — false — and would be the system's first
+non-append mutation of a message array. Appending is simply true: you
+asked, then you edited, and the model reads the sequence in the order it
+happened. The rejected alternative, refusing Refresh while an edit is
+unannounced, is a dead end a user cannot reason their way out of.
+
+Lazy minting carries over unchanged: the pending-notice decision already
+asks only "is the latest revision a manual one nothing has announced",
+so a Refresh with no intervening edit appends nothing at all, and a
+second Refresh after the first never re-mints.
+
+**The version tags are allowed to differ.** The stranded user message
+keeps the `configVersion` it carried when first sent; the refreshed
+request is built from the latest saved version, like every other
+request. If the configuration was edited in between — often it was,
+since a failure is a reason to go change something — the record reads
+"asked under `linkml.4`, answered under `linkml.5`". That is true, and
+re-tagging the user message to hide it would be editing a persisted
+record to make a display look tidier.
+
+**No new persisted state.** Unlike `reasoning` and the notice fields
+before it, Refresh adds nothing to `Message`, nothing to `Artifact`, and
+nothing for the hand-written dump validator or import byte-equality to
+learn. A refreshed exchange is indistinguishable in the record from one
+that succeeded the first time — correctly, because it is one.
+
+**Destructive retry was considered and rejected.** The mainstream chat
+gesture — retry any user message, discarding every message and revision
+after it — was this feature's original shape. It would have been
+Variorum's third true delete and the first with no mandated backup, in a
+system whose revision history is append-only and whose import
+fast-forwards a truncated unit straight back out of any older dump.
+Refresh takes the one case where the gesture costs nothing: the message
+with nothing after it to destroy.
+
 **Deferred, deliberately.** Wiring the model's four tools into the chat
 loop is its own follow-up slice: it needs multi-step streaming, tool-call
 rendering, the archive confirmation gate's UI, and an answer for how a

@@ -246,6 +246,19 @@ export interface VariorumRepository {
    */
   saveManualEdit(unitId: string, content: string): Promise<Unit>;
 
+  /**
+   * Appends the pending edit notice — a manual revision no notice
+   * announces yet — AFTER the unit's existing messages, so a Refresh of
+   * a stranded user message re-sends context that includes the human's
+   * edit (DESIGN.md "Refresh — the stranded user message"). No-ops
+   * (returns the unit unchanged) when nothing is pending, mirroring
+   * saveManualEdit. Note the ordering against appendUserMessage, which
+   * puts a notice BEFORE the message it accompanies: there both are
+   * minted at one send; here the message is already persisted and the
+   * edit came after it, so appending is what is true.
+   */
+  appendPendingEditNotice(unitId: string): Promise<Unit>;
+
   archiveUnit(unitId: string): Promise<Unit>;
   restoreUnit(unitId: string): Promise<Unit>;
 

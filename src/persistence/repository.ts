@@ -277,6 +277,10 @@ class Repository implements VariorumRepository {
     });
   }
 
+  appendPendingEditNotice(_unitId: string): Promise<Unit> {
+    throw new Error('not implemented: appendPendingEditNotice');
+  }
+
   archiveUnit(unitId: string): Promise<Unit> {
     return this.enqueue(async () => {
       const unit = this.getUnit(unitId);
