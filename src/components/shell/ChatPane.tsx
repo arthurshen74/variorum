@@ -123,6 +123,19 @@ function UnitChat({ unit, artifactType }: UnitChatProps) {
   useEffect(() => () => void stop(), [stop]);
 
   const isGenerating = status === 'submitted' || status === 'streaming';
+  // The record already IS the request: a trailing user turn with nothing in
+  // flight is a question that was asked and never answered. A notice a
+  // previous Refresh appended is user-role too, so it stays refreshable.
+  const isStranded = unit.messages.at(-1)?.role === 'user' && status === 'ready';
+
+  // Announce any manual edit made while stranded, re-seed from the record,
+  // and send it again. regenerate() keeps a trailing user message.
+  async function refresh() {
+    const updated = await repository.appendPendingEditNotice(unit.id);
+    setMessages(toUIMessages(updated.messages));
+    sentAt.current = new Date().toISOString();
+    void regenerate();
+  }
 
   return (
     <>
@@ -178,6 +191,20 @@ function UnitChat({ unit, artifactType }: UnitChatProps) {
                 className="w-fit rounded-md border px-2 py-1 font-medium hover:bg-accent"
               >
                 Retry
+              </button>
+            </div>
+          ) : null}
+          {isStranded ? (
+            <div className="flex flex-col gap-2 rounded-md border bg-muted/30 p-3 text-xs">
+              <span className="text-muted-foreground">
+                This message was never answered.
+              </span>
+              <button
+                type="button"
+                onClick={() => void refresh()}
+                className="w-fit rounded-md border px-2 py-1 font-medium hover:bg-accent"
+              >
+                Refresh
               </button>
             </div>
           ) : null}

@@ -48,7 +48,7 @@ behavior, now able to fail. Titles changed accordingly.
 - Tests: e2e/refresh.spec.ts — filter:
   npx playwright test e2e/refresh.spec.ts
 - Depends on: G1
-- Status: RED
+- Status: GREEN (2026-08-20)
 
 ## Order
 
