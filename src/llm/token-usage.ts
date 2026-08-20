@@ -12,6 +12,10 @@ export const TOKEN_RATIO_KEY_PREFIX = 'variorum.tokenRatio.';
 export const DEFAULT_CHARS_PER_TOKEN = 4;
 export const CALIBRATION_MIN_TOKENS = 25;
 
+// The UI is English-only; a locale-sensitive format would make the
+// separator depend on the machine the app runs on.
+const TOKEN_COUNT_FORMAT = new Intl.NumberFormat('en-US');
+
 /** The server's exact figures from the terminal usage chunk. */
 export interface ExchangeUsage {
   inputTokens: number;
@@ -27,7 +31,12 @@ export interface UsageMetadata {
 
 /** Stored ratio for the model, or the stock default. */
 export function getCharsPerToken(modelName: string): number {
-  throw new Error(`not implemented: getCharsPerToken (${modelName})`);
+  const stored = localStorage.getItem(TOKEN_RATIO_KEY_PREFIX + modelName);
+  if (stored === null) return DEFAULT_CHARS_PER_TOKEN;
+
+  const ratio = Number(stored);
+  if (!Number.isFinite(ratio) || ratio <= 0) return DEFAULT_CHARS_PER_TOKEN;
+  return ratio;
 }
 
 /** Ratio = chars / completionTokens; skipped under the calibration floor. */
@@ -36,19 +45,45 @@ export function recordCalibration(
   chars: number,
   completionTokens: number,
 ): void {
-  throw new Error(
-    `not implemented: recordCalibration (${modelName}, ${chars}, ${completionTokens})`,
+  if (completionTokens < CALIBRATION_MIN_TOKENS) return;
+  localStorage.setItem(
+    TOKEN_RATIO_KEY_PREFIX + modelName,
+    String(chars / completionTokens),
   );
 }
 
 /** Sum of text and reasoning part lengths — the live estimator's input. */
 export function streamedChars(message: UIMessage): number {
-  throw new Error(`not implemented: streamedChars (${message.id})`);
+  return message.parts.reduce(
+    (total, part) =>
+      part.type === 'text' || part.type === 'reasoning'
+        ? total + part.text.length
+        : total,
+    0,
+  );
 }
 
 /** Narrows unknown message metadata; null when absent or malformed. */
 export function usageFromMessage(message: UIMessage): UsageMetadata | null {
-  throw new Error(`not implemented: usageFromMessage (${message.id})`);
+  const metadata = message.metadata;
+  if (typeof metadata !== 'object' || metadata === null) return null;
+
+  const { modelName, usage } = metadata as Record<string, unknown>;
+  if (typeof modelName !== 'string') return null;
+  if (typeof usage !== 'object' || usage === null) return null;
+
+  const { inputTokens, outputTokens, totalTokens } = usage as Record<
+    string,
+    unknown
+  >;
+  if (
+    typeof inputTokens !== 'number' ||
+    typeof outputTokens !== 'number' ||
+    typeof totalTokens !== 'number'
+  ) {
+    return null;
+  }
+  return { modelName, usage: { inputTokens, outputTokens, totalTokens } };
 }
 
 export type TokenReadout =
@@ -63,5 +98,20 @@ export type TokenReadout =
 
 /** The display string; empty means the slot renders nothing. */
 export function formatTokenReadout(readout: TokenReadout): string {
-  throw new Error(`not implemented: formatTokenReadout (${readout.kind})`);
+  if (readout.kind === 'idle') return '';
+
+  if (readout.kind === 'settled') {
+    const { inputTokens, outputTokens, totalTokens } = readout.usage;
+    return `${count(totalTokens)} tokens · ${count(inputTokens)} in + ${count(outputTokens)} out`;
+  }
+
+  const streamed = Math.round(readout.streamedChars / readout.charsPerToken);
+  if (readout.baselineTokens === null) {
+    return `≈${count(streamed)} tokens out`;
+  }
+  return `≈${count(readout.baselineTokens + streamed)} tokens in context`;
+}
+
+function count(tokens: number): string {
+  return TOKEN_COUNT_FORMAT.format(tokens);
 }
