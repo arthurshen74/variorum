@@ -26,7 +26,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 - Tests: src/llm/chat-transport.usage.test.ts — filter:
   npx vitest run src/llm/chat-transport.usage.test.ts
 - Depends on: G1 (types)
-- Status: RED
+- Status: GREEN (2026-08-20)
 
 ### G3 — readout in the exchange-state slot
 - Intent: ChatPane renders the readout (label "Token usage"): estimating

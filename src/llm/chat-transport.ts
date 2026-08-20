@@ -105,9 +105,19 @@ export function finishUsageMetadata(
   part: TextStreamPart<ToolSet>,
   modelName: string,
 ): UsageMetadata | undefined {
-  throw new Error(
-    `not implemented: finishUsageMetadata (${part.type}, ${modelName})`,
-  );
+  if (part.type !== 'finish') return undefined;
+
+  // All three or nothing: the settled readout shows prompt, completion and
+  // total together, so a half-reported payload would render a wrong total.
+  const { inputTokens, outputTokens, totalTokens } = part.totalUsage;
+  if (
+    inputTokens === undefined ||
+    outputTokens === undefined ||
+    totalTokens === undefined
+  ) {
+    return undefined;
+  }
+  return { modelName, usage: { inputTokens, outputTokens, totalTokens } };
 }
 
 export interface ChatTransportDeps {
@@ -154,6 +164,8 @@ export class VariorumChatTransport implements ChatTransport<UIMessage> {
           // the failure.
           onError: (error) =>
             error instanceof Error ? error.message : String(error),
+          messageMetadata: ({ part }) =>
+            finishUsageMetadata(part, version.modelName),
         }),
       ),
     );

@@ -77,6 +77,9 @@ export function createProvider(fetchImpl?: typeof fetch) {
   return createOpenAICompatible({
     name: 'variorum-local',
     baseURL: getBaseUrl(),
+    // Puts stream_options.include_usage on every request: without it no
+    // OpenAI-compatible surface reports token usage for a stream at all.
+    includeUsage: true,
     ...(apiKey !== null ? { apiKey } : {}),
     ...(fetchImpl !== undefined ? { fetch: fetchImpl } : {}),
   });
