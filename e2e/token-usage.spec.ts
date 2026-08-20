@@ -80,7 +80,7 @@ test('[G3] while streaming, the readout estimates from streamed characters', asy
   llm.respondWith({ chunks: [{ content: 'x'.repeat(40) }], holdOpen: true });
   await send(page, 'go');
 
-  await expect(readout(page)).toHaveText('≈10 tokens out');
+  await expect(readout(page)).toHaveText('Tokens out: ≈10');
   llm.release();
 });
 
@@ -118,7 +118,7 @@ test('[G3] the next send carries the previous total forward as the baseline', as
   await expect(readout(page)).toHaveText('130 tokens · 100 in + 30 out');
 
   await send(page, 'again');
-  await expect(readout(page)).toHaveText('≈130 tokens in context');
+  await expect(readout(page)).toHaveText('Context Tokens: ≈130');
   llm.release();
 });
 
@@ -135,7 +135,7 @@ test('[G3] a truncated response never settles the readout', async ({
     usage: { prompt_tokens: 8000, completion_tokens: 191, total_tokens: 8191 },
   });
   await send(page, 'go');
-  await expect(readout(page)).toHaveText('≈7 tokens out');
+  await expect(readout(page)).toHaveText('Tokens out: ≈7');
 
   llm.release();
   await expect(page.getByRole('alert')).toContainText(TRUNCATED_TEXT);

@@ -147,7 +147,7 @@ describe('[G1] formatTokenReadout', () => {
         streamedChars: 0,
         charsPerToken: 4,
       }),
-    ).toBe('≈100 tokens in context');
+    ).toBe('Context Tokens: ≈100');
   });
 
   it('adds the rounded char estimate to the baseline', () => {
@@ -158,7 +158,7 @@ describe('[G1] formatTokenReadout', () => {
         streamedChars: 42,
         charsPerToken: 4,
       }),
-    ).toBe('≈111 tokens in context');
+    ).toBe('Context Tokens: ≈111');
   });
 
   it('formats a missing baseline as tokens out', () => {
@@ -169,7 +169,7 @@ describe('[G1] formatTokenReadout', () => {
         streamedChars: 200,
         charsPerToken: 4,
       }),
-    ).toBe('≈50 tokens out');
+    ).toBe('Tokens out: ≈50');
   });
 
   it('formats settled usage with the exact split', () => {
@@ -189,6 +189,6 @@ describe('[G1] formatTokenReadout', () => {
         streamedChars: 0,
         charsPerToken: 4,
       }),
-    ).toBe('≈8,191 tokens in context');
+    ).toBe('Context Tokens: ≈8,191');
   });
 });

@@ -56,9 +56,9 @@ export function recordCalibration(
 export function streamedChars(message: UIMessage): number {
   return message.parts.reduce(
     (total, part) =>
-      part.type === 'text' || part.type === 'reasoning'
-        ? total + part.text.length
-        : total,
+      part.type === 'text' || part.type === 'reasoning' ?
+        total + part.text.length
+      : total,
     0,
   );
 }
@@ -107,9 +107,9 @@ export function formatTokenReadout(readout: TokenReadout): string {
 
   const streamed = Math.round(readout.streamedChars / readout.charsPerToken);
   if (readout.baselineTokens === null) {
-    return `≈${count(streamed)} tokens out`;
+    return `Tokens out: ≈${count(streamed)}`;
   }
-  return `≈${count(readout.baselineTokens + streamed)} tokens in context`;
+  return `Context Tokens: ≈${count(readout.baselineTokens + streamed)}`;
 }
 
 function count(tokens: number): string {
