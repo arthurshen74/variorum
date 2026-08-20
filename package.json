@@ -1,6 +1,6 @@
 {
   "name": "variorum",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A single-file artifact editor assisted by a generative AI model of your choosing",
   "license": "Apache-2.0",
   "type": "module",
