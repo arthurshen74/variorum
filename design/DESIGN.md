@@ -973,6 +973,80 @@ response — see above) is a boundary: an inline error row in the
 transcript with a Retry that re-sends without re-appending the
 already-persisted user message.
 
+**Token usage display.** The server's context window is a hard budget
+shared by prompt and completion (see "Truncation discards, too"), and
+until now the only view Variorum had of it was the crash at the end.
+This makes the budget visible: a token readout in the exchange-state
+slot — the same slot the Loader, the error row, and Refresh narrate
+from — showing an estimate while a response streams and the server's
+exact figures once it completes.
+
+What the wire allows dictates the shape. No OpenAI-compatible surface
+streams a running count: usage arrives exactly once, in a terminal SSE
+chunk, and only when the request opts in via
+`stream_options.include_usage` — so the provider is created with
+`includeUsage: true`. (The engine counts every token — llama.cpp's
+`n_decoded` — but serializes it only to the server's dev log; LM
+Studio's native REST and Anthropic-compatible surfaces likewise deliver
+stats only in terminal events.) Everything below follows: the live
+number must be client-derived, and the exact number exists only at
+finish.
+
+The live estimate is streamed characters over a calibrated
+chars-per-token ratio, counting reasoning and text deltas alike. Two
+estimators were rejected. Counting SSE chunks reads near-exact against
+llama.cpp (one delta per decoded token) but that is a framing artifact
+of one backend — batching servers (vLLM, cloud gateways, OpenRouter
+routes) pack many tokens per chunk and the count silently collapses.
+Client-side tokenizers were rejected twice over: tiktoken encodes
+OpenAI vocabularies, so against Qwen or Llama it produces a
+precise-looking wrong number — false precision is worse than an honest
+`≈` — and a model-matched tokenizer (HF `tokenizer.json` in the
+browser) costs a dependency, a model-name-to-repo mapping, and a
+replicated chat template to approximate a number the server states
+exactly at every finish. Characters are the one signal every provider
+must deliver faithfully.
+
+Calibration is a measurement, not a recipe, so it never touches the
+configuration — a version is immutable and user-minted, and a
+machine-updated field on the name record would put telemetry into
+exports, the dump validator, and import byte-equality for the sake of a
+display heuristic. It is device state: localStorage
+`variorum.tokenRatio.<modelName>`, keyed by model id because the
+tokenizer is a property of the model — sharing calibration across
+units kills the cold start for any model seen before, and a config
+save that switches models reads and writes the right key on the next
+exchange because the transport resolves the model name from the same
+version that builds the request. The update rule is deliberately dumb:
+ratio = characters of the completed response (reasoning + text) ÷ its
+exact `completion_tokens`, taken from the most recent completed
+exchange, skipped when the response is under 25 completion tokens so a
+one-line reply cannot poison the ratio. Stock seed 4.0 until a model
+first calibrates. A model swapped behind the same name self-heals at
+its first finish.
+
+The prompt side is carried forward, not measured: the prompt count is
+fixed at send but secret until finish, so the baseline is the previous
+exchange's exact `total_tokens`, displayed as part of the `≈` total.
+The first exchange of a session has no baseline and shows the output
+estimate alone. Learning the prompt count before send — a
+`max_tokens: 1` preflight, the LM Studio SDK's `countTokens`, or the
+Anthropic-compatible wire's `message_start` — was considered and
+deferred: each costs a round trip, a dependency, or a transport swap,
+and none becomes worth it until a pre-send "this will not fit" warning
+is wanted. If that feature arrives, it buys the exact source then.
+
+At finish the display reconciles: the readout snaps to the server's
+exact figures (prompt and completion shown separately), the ratio
+recalibrates, and the total becomes the next request's baseline. The
+readout is session-ephemeral narration of the live exchange, not part
+of the record: nothing lands on `Message`, nothing in the dump, the
+validator and import byte-equality learn nothing, and the Zustand
+store is untouched — the streaming count is derived from `useChat`'s
+in-flight message parts, and the exact usage crosses the
+anti-corruption boundary as UI message metadata on the finish chunk.
+After a reload the slot is simply empty until the next exchange.
+
 **Refresh — the stranded user message.** Cancel, truncation, and plain
 request failure all end the same way: the user message stays, nothing of
 the response is persisted. That leaves a unit whose last message is a

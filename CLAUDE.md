@@ -153,7 +153,8 @@ Data model:
   API keys, the LLM endpoint URL, the device theme preference, and
   per-unit extension layout state (`variorum.ext.<extensionId>.<unitId>`)
   live in localStorage (device state — never in the Zustand store, never
-  in an export). Export is a
+  in an export), as does the per-model token-ratio calibration
+  (`variorum.tokenRatio.<modelName>`). Export is a
   full-database dump including archived units and all configuration
   versions.
 - `artifactType` lives on the configuration _name_ record — set at
