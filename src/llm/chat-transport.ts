@@ -8,11 +8,18 @@
  * single file that would change if requests ever routed through a proxy.
  */
 import { streamText, toUIMessageStream } from 'ai';
-import type { ChatTransport, UIMessage, UIMessageChunk } from 'ai';
+import type {
+  ChatTransport,
+  TextStreamPart,
+  ToolSet,
+  UIMessage,
+  UIMessageChunk,
+} from 'ai';
 import { variorumStore } from '@/state/store';
 import { selectLatestVersion, selectUnit } from '@/state/selectors';
 import type { ConfigurationVersion } from '@/domain/types';
 import { toModelMessages } from './mapping';
+import type { UsageMetadata } from './token-usage';
 import { createProvider } from './transport';
 
 // OpenAI-compatible request body fields the SDK provider will not send:
@@ -86,6 +93,20 @@ export function failOnTruncation(
         controller.enqueue(chunk);
       },
     }),
+  );
+}
+
+/**
+ * Builds the finish chunk's usage metadata (DESIGN.md "Token usage
+ * display") from a finish stream part; undefined for every other part
+ * and when the provider reported no usage numbers.
+ */
+export function finishUsageMetadata(
+  part: TextStreamPart<ToolSet>,
+  modelName: string,
+): UsageMetadata | undefined {
+  throw new Error(
+    `not implemented: finishUsageMetadata (${part.type}, ${modelName})`,
   );
 }
 

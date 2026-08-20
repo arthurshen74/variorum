@@ -18,6 +18,12 @@ export interface Chunk {
   delayMs?: number;
 }
 
+export interface Usage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}
+
 export interface ScriptedResponse {
   /** Non-200 short-circuits with an error body and no stream. */
   status?: number;
@@ -26,6 +32,8 @@ export interface ScriptedResponse {
   holdOpen?: boolean;
   /** OpenAI finish_reason on the closing event; 'length' means truncated. */
   finishReason?: string;
+  /** Emitted as the terminal empty-choices usage chunk (include_usage). */
+  usage?: Usage;
 }
 
 const CORS_HEADERS = {
@@ -51,6 +59,7 @@ export class MockLlm {
   private script: ScriptedResponse[] = [];
   private held: ServerResponse | undefined;
   private heldFinishReason: string | undefined;
+  private heldUsage: Usage | undefined;
   /** Parsed JSON bodies of every completion request, in order. */
   readonly requests: Record<string, unknown>[] = [];
   /** Headers of every completion request, in order (names lowercased by node). */
@@ -116,9 +125,10 @@ export class MockLlm {
     if (scripted.holdOpen === true) {
       this.held = res;
       this.heldFinishReason = scripted.finishReason;
+      this.heldUsage = scripted.usage;
       return;
     }
-    this.finish(res, scripted.finishReason);
+    this.finish(res, scripted.finishReason, scripted.usage);
   }
 
   /** Finish a held stream, optionally emitting more chunks first. */
@@ -130,11 +140,24 @@ export class MockLlm {
       const { delayMs: _delayMs, ...delta } = chunk;
       res.write(sseEvent(delta, null));
     }
-    this.finish(res, this.heldFinishReason);
+    this.finish(res, this.heldFinishReason, this.heldUsage);
   }
 
-  private finish(res: ServerResponse, reason = 'stop'): void {
+  private finish(res: ServerResponse, reason = 'stop', usage?: Usage): void {
     res.write(sseEvent({}, reason));
+    if (usage !== undefined) {
+      // OpenAI include_usage convention: terminal chunk, empty choices.
+      res.write(
+        `data: ${JSON.stringify({
+          id: 'mock',
+          object: 'chat.completion.chunk',
+          created: 0,
+          model: 'mock-model',
+          choices: [],
+          usage,
+        })}\n\n`,
+      );
+    }
     res.write('data: [DONE]\n\n');
     res.end();
   }
