@@ -88,6 +88,28 @@ class Repository implements VariorumRepository {
     return latest;
   }
 
+  /** The message announcing an unannounced manual revision, or null. */
+  private editNoticeMessage(unit: Unit): Message | null {
+    const pending = pendingEditNotice(unit);
+    if (pending === null) {
+      return null;
+    }
+    const config = variorumStore
+      .getState()
+      .configurations.find((c) => c.name === unit.configName);
+    if (config === undefined) {
+      throw new Error(`unknown configuration: ${unit.configName}`);
+    }
+    return {
+      role: 'user',
+      configVersion: this.latestVersion(unit.configName).version,
+      sentAt: nowIso(),
+      kind: EDIT_NOTICE_KIND,
+      artifactVersion: pending.version,
+      content: editNoticeContent(config.artifactType, pending.content),
+    };
+  }
+
   /** The store as a dump: what export returns, what merge compares against. */
   private snapshot(): DatabaseDump {
     const s = variorumStore.getState();
@@ -185,22 +207,9 @@ class Repository implements VariorumRepository {
       const version = this.latestVersion(unit.configName);
       const messages = [...unit.messages];
 
-      const pending = pendingEditNotice(unit);
-      if (pending !== null) {
-        const config = variorumStore
-          .getState()
-          .configurations.find((c) => c.name === unit.configName);
-        if (config === undefined) {
-          throw new Error(`unknown configuration: ${unit.configName}`);
-        }
-        messages.push({
-          role: 'user',
-          configVersion: version.version,
-          sentAt: nowIso(),
-          kind: EDIT_NOTICE_KIND,
-          artifactVersion: pending.version,
-          content: editNoticeContent(config.artifactType, pending.content),
-        });
+      const notice = this.editNoticeMessage(unit);
+      if (notice !== null) {
+        messages.push(notice);
       }
 
       messages.push({
@@ -277,8 +286,18 @@ class Repository implements VariorumRepository {
     });
   }
 
-  appendPendingEditNotice(_unitId: string): Promise<Unit> {
-    throw new Error('not implemented: appendPendingEditNotice');
+  appendPendingEditNotice(unitId: string): Promise<Unit> {
+    return this.enqueue(async () => {
+      const unit = this.getUnit(unitId);
+      const notice = this.editNoticeMessage(unit);
+      if (notice === null) {
+        return unit; // nothing pending announces nothing
+      }
+      return this.writeUnit({
+        ...unit,
+        messages: [...unit.messages, notice],
+      });
+    });
   }
 
   archiveUnit(unitId: string): Promise<Unit> {

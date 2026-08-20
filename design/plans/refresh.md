@@ -37,7 +37,7 @@ behavior, now able to fail. Titles changed accordingly.
   appendPendingEditNotice — the Refresh notice") — filter:
   npx vitest run src/persistence/repository.refresh.test.ts
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-08-20)
 
 ### G2 — chat pane: the Refresh control
 - Intent: render the control in the transcript's exchange-state slot on
