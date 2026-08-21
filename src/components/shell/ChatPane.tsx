@@ -42,11 +42,19 @@ import {
 } from '@/state/selectors';
 import { useVariorum } from '@/state/store';
 
+// Floor is the pane's former fixed width (w-96); ceiling leaves the
+// artifact pane a usable share of the viewport.
+const MIN_WIDTH_PX = 384;
+const MAX_WIDTH_FRACTION = 0.7;
+
 interface ChatPaneProps {
   unitId: string | null;
 }
 
 export default function ChatPane({ unitId }: ChatPaneProps) {
+  // Session-only by design: no persistence, resets on reload.
+  const [width, setWidth] = useState(MIN_WIDTH_PX);
+  const dragStart = useRef<{ x: number; width: number } | null>(null);
   const unit = useVariorum(
     useMemo(
       () => (unitId === null ? () => undefined : selectUnit(unitId)),
@@ -56,9 +64,9 @@ export default function ChatPane({ unitId }: ChatPaneProps) {
   const configuration = useVariorum(
     useMemo(
       () =>
-        unit === undefined
-          ? () => undefined
-          : selectConfiguration(unit.configName),
+        unit === undefined ?
+          () => undefined
+        : selectConfiguration(unit.configName),
       [unit],
     ),
   );
@@ -66,34 +74,65 @@ export default function ChatPane({ unitId }: ChatPaneProps) {
   const version = useVariorum(
     useMemo(
       () =>
-        unit === undefined
-          ? () => undefined
-          : selectLatestVersion(unit.configName),
+        unit === undefined ?
+          () => undefined
+        : selectLatestVersion(unit.configName),
       [unit],
     ),
   );
 
   return (
-    <aside className="flex w-96 shrink-0 flex-col border-l">
+    <aside
+      className="relative flex shrink-0 flex-col border-l"
+      style={{ width }}
+    >
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize chat"
+        className="absolute inset-y-0 left-0 z-10 w-1.5 cursor-col-resize touch-none hover:bg-primary/30"
+        onPointerDown={(event) => {
+          // preventDefault stops a text selection from starting mid-drag.
+          event.preventDefault();
+          dragStart.current = { x: event.clientX, width };
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          if (dragStart.current === null) return;
+          const next =
+            dragStart.current.width + (dragStart.current.x - event.clientX);
+          setWidth(
+            Math.min(
+              Math.max(next, MIN_WIDTH_PX),
+              window.innerWidth * MAX_WIDTH_FRACTION,
+            ),
+          );
+        }}
+        onPointerUp={() => {
+          dragStart.current = null;
+        }}
+        onPointerCancel={() => {
+          dragStart.current = null;
+        }}
+      />
       <div className="flex h-11 shrink-0 items-center border-b px-3">
         <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Chat
         </span>
       </div>
-      {unit === undefined ? (
+      {unit === undefined ?
         <div className="flex min-h-0 flex-1 items-center justify-center p-4">
           <p className="text-center text-xs text-muted-foreground">
             Select a unit to start a conversation.
           </p>
         </div>
-      ) : (
-        <UnitChat
+      : <UnitChat
           key={unit.id}
           unit={unit}
           artifactType={configuration?.artifactType ?? 'text'}
           modelName={version?.modelName ?? ''}
         />
-      )}
+      }
     </aside>
   );
 }
@@ -115,37 +154,44 @@ function UnitChat({ unit, artifactType, modelName }: UnitChatProps) {
   // instance is keyed by unit and dies with a reload.
   const [baselineTokens, setBaselineTokens] = useState<number | null>(null);
 
-  const { messages, setMessages, sendMessage, regenerate, stop, status, error } =
-    useChat({
-      transport,
-      messages: toUIMessages(unit.messages),
-      onError: () => dropPendingAssistant(),
-      onFinish: ({ message, isAbort, isDisconnect, isError }) => {
-        // A cancelled or failed response is never extracted from and never
-        // recorded — revisions come from completed responses only.
-        if (isAbort || isDisconnect || isError) return;
-        const completion = completionFromUIMessage(
-          message,
-          sentAt.current,
-          new Date().toISOString(),
+  const {
+    messages,
+    setMessages,
+    sendMessage,
+    regenerate,
+    stop,
+    status,
+    error,
+  } = useChat({
+    transport,
+    messages: toUIMessages(unit.messages),
+    onError: () => dropPendingAssistant(),
+    onFinish: ({ message, isAbort, isDisconnect, isError }) => {
+      // A cancelled or failed response is never extracted from and never
+      // recorded — revisions come from completed responses only.
+      if (isAbort || isDisconnect || isError) return;
+      const completion = completionFromUIMessage(
+        message,
+        sentAt.current,
+        new Date().toISOString(),
+      );
+      const artifact = extractArtifact(completion.content, artifactType);
+      void repository.completeExchange(
+        unit.id,
+        completion,
+        artifact ?? undefined,
+      );
+      const settled = usageFromMessage(message);
+      if (settled !== null) {
+        recordCalibration(
+          settled.modelName,
+          streamedChars(message),
+          settled.usage.outputTokens,
         );
-        const artifact = extractArtifact(completion.content, artifactType);
-        void repository.completeExchange(
-          unit.id,
-          completion,
-          artifact ?? undefined,
-        );
-        const settled = usageFromMessage(message);
-        if (settled !== null) {
-          recordCalibration(
-            settled.modelName,
-            streamedChars(message),
-            settled.usage.outputTokens,
-          );
-          setBaselineTokens(settled.usage.totalTokens);
-        }
-      },
-    });
+        setBaselineTokens(settled.usage.totalTokens);
+      }
+    },
+  });
 
   // The partial leaves the display too, so the screen never disagrees with
   // the record.
@@ -166,21 +212,22 @@ function UnitChat({ unit, artifactType, modelName }: UnitChatProps) {
   // the record) both leave the slot empty without any extra bookkeeping.
   const last = messages.at(-1);
   const settledUsage = last === undefined ? null : usageFromMessage(last);
-  const readout: TokenReadout = isGenerating
-    ? {
+  const readout: TokenReadout =
+    isGenerating ?
+      {
         kind: 'estimating',
         baselineTokens,
         streamedChars: last?.role === 'assistant' ? streamedChars(last) : 0,
         charsPerToken: getCharsPerToken(modelName),
       }
-    : settledUsage !== null
-      ? { kind: 'settled', usage: settledUsage.usage }
-      : { kind: 'idle' };
+    : settledUsage !== null ? { kind: 'settled', usage: settledUsage.usage }
+    : { kind: 'idle' };
   const readoutText = formatTokenReadout(readout);
   // The record already IS the request: a trailing user turn with nothing in
   // flight is a question that was asked and never answered. A notice a
   // previous Refresh appended is user-role too, so it stays refreshable.
-  const isStranded = unit.messages.at(-1)?.role === 'user' && status === 'ready';
+  const isStranded =
+    unit.messages.at(-1)?.role === 'user' && status === 'ready';
 
   // Announce any manual edit made while stranded, re-seed from the record,
   // and send it again. regenerate() keeps a trailing user message.
@@ -205,16 +252,16 @@ function UnitChat({ unit, artifactType, modelName }: UnitChatProps) {
                 key={message.id}
                 message={message}
                 versionTag={
-                  message.role === 'assistant' && persisted !== undefined
-                    ? `${unit.configName}.${persisted.configVersion}`
-                    : ''
+                  message.role === 'assistant' && persisted !== undefined ?
+                    `${unit.configName}.${persisted.configVersion}`
+                  : ''
                 }
                 artifactType={artifactType}
                 revisionVersion={revision?.version ?? null}
                 editNoticeVersion={
-                  persisted?.kind === EDIT_NOTICE_KIND
-                    ? (persisted.artifactVersion ?? null)
-                    : null
+                  persisted?.kind === EDIT_NOTICE_KIND ?
+                    (persisted.artifactVersion ?? null)
+                  : null
                 }
                 isStreaming={
                   status === 'streaming' && index === messages.length - 1
@@ -222,21 +269,7 @@ function UnitChat({ unit, artifactType, modelName }: UnitChatProps) {
               />
             );
           })}
-          {readoutText === '' ? null : (
-            <div
-              aria-label="Token usage"
-              className="text-xs text-muted-foreground"
-            >
-              {readoutText}
-            </div>
-          )}
-          {status === 'submitted' ? (
-            <div role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Loader />
-              Waiting for the model
-            </div>
-          ) : null}
-          {status === 'error' ? (
+          {status === 'error' ?
             <div
               role="alert"
               className="flex flex-col gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs"
@@ -255,8 +288,8 @@ function UnitChat({ unit, artifactType, modelName }: UnitChatProps) {
                 Retry
               </button>
             </div>
-          ) : null}
-          {isStranded ? (
+          : null}
+          {isStranded ?
             <div className="flex flex-col gap-2 rounded-md border bg-muted/30 p-3 text-xs">
               <span className="text-muted-foreground">
                 This message was never answered.
@@ -269,7 +302,7 @@ function UnitChat({ unit, artifactType, modelName }: UnitChatProps) {
                 Refresh
               </button>
             </div>
-          ) : null}
+          : null}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
@@ -288,10 +321,34 @@ function UnitChat({ unit, artifactType, modelName }: UnitChatProps) {
           }}
         >
           <PromptInputBody>
-            <PromptInputTextarea aria-label="Message" placeholder="Message" />
+            <PromptInputTextarea
+              aria-label="Message"
+              placeholder="Message"
+              disabled={isGenerating}
+            />
           </PromptInputBody>
           <PromptInputFooter>
-            <span />
+            <div className="flex min-w-0 gap-2 text-xs items-center">
+              {isGenerating ?
+                <Loader />
+              : null}
+              {status === 'submitted' ?
+                <div
+                  role="status"
+                  className="text-muted-foreground"
+                >
+                  <span>Waiting for the model</span>
+                </div>
+              : null}
+              {readoutText === '' ? null : (
+                <div
+                  aria-label="Token usage"
+                  className="truncate"
+                >
+                  <span>{readoutText}</span>
+                </div>
+              )}
+            </div>
             <PromptInputSubmit
               aria-label={isGenerating ? 'Stop' : 'Send'}
               status={status}

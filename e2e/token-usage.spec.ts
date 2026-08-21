@@ -1,6 +1,6 @@
 /**
  * [G3] Acceptance for DESIGN.md "Token usage display": the readout in the
- * exchange-state slot — a live ≈ estimate from streamed characters while
+ * composer footer — a live ≈ estimate from streamed characters while
  * a response is in flight, the server's exact figures once it completes,
  * the carried-forward baseline on the next send, calibration written to
  * localStorage per model, nothing settled from a truncated response, and

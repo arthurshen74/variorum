@@ -52,7 +52,7 @@ export default function AppShell() {
           <h1 className="text-sm font-semibold tracking-tight">
             {activeUnitName !== undefined ?
               <span className="min-w-0 truncate text-sm text-muted-foreground">
-                {activeUnitName}
+                Variorum: {activeUnitName}
               </span>
             : 'Variorum'}
           </h1>

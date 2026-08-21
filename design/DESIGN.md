@@ -58,7 +58,10 @@ is stealable anyway: the entire theme lives in one file of shadcn tokens
 
 **First-implementation shell.** Three panes: a collapsible left sidebar
 (units, configuration entry points), the artifact pane in the middle, and a
-right chat pane that expands or hides. The artifact pane owns a tab strip
+right chat pane that expands or hides. The chat pane is resizable by
+dragging its left edge — floored at its default width, capped at 70% of
+the viewport; the chosen width is session state, deliberately not
+persisted. The artifact pane owns a tab strip
 from day one (see Extensions). Configuration and all other non-chat
 operations are dialogs over the main pane with a close-out X — no routing,
 no pages. Chain-of-thought renders in the chat pane (reasoning content
@@ -973,13 +976,24 @@ response — see above) is a boundary: an inline error row in the
 transcript with a Retry that re-sends without re-appending the
 already-persisted user message.
 
+**The composer locks while a response is in flight.** While a response
+is pending or streaming, the message textarea is disabled and the only
+control the composer offers is Stop. One exchange at a time is the data
+model's rule — the request is the persisted history, so a mid-stream
+send would race the in-flight exchange for the record's tail — and the
+lock makes the rule visible instead of leaving Enter as a loophole.
+In-flight narration — the Loader and the token readout — renders in the
+composer footer, beside the Stop it accompanies. Terminal states (the
+error row, Refresh) stay in the transcript's exchange-state slot, where
+they narrate the last exchange's outcome.
+
 **Token usage display.** The server's context window is a hard budget
 shared by prompt and completion (see "Truncation discards, too"), and
 until now the only view Variorum had of it was the crash at the end.
-This makes the budget visible: a token readout in the exchange-state
-slot — the same slot the Loader, the error row, and Refresh narrate
-from — showing an estimate while a response streams and the server's
-exact figures once it completes.
+This makes the budget visible: a token readout in the composer footer,
+beside the Loader (see "The composer locks while a response is in
+flight") — showing an estimate while a response streams and the
+server's exact figures once it completes.
 
 What the wire allows dictates the shape. No OpenAI-compatible surface
 streams a running count: usage arrives exactly once, in a terminal SSE
@@ -1067,11 +1081,10 @@ rather than merging. An error row that names a cause should carry its
 own action, and Refresh should not appear beside it saying the same
 thing twice.
 
-It renders in the transcript's exchange-state slot, alongside the Loader
-and the error row, not as an action on the message row. Those three
-narrate the state of the last exchange, one component owns that state,
-and a control that belongs to the conversation's tail is not a property
-of a message.
+It renders in the transcript's exchange-state slot, alongside the error
+row, not as an action on the message row. Those two narrate the outcome
+of the last exchange, one component owns that state, and a control that
+belongs to the conversation's tail is not a property of a message.
 
 **A manual edit made while stranded rides along — appended after.** A
 failed request is exactly when a user wanders to the artifact pane and
