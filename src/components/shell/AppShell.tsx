@@ -72,6 +72,7 @@ export default function AppShell() {
       <ConfigurationsDialog
         open={dialog === 'configurations'}
         onOpenChange={(open) => setDialog(open ? 'configurations' : null)}
+        onReplaced={() => setActiveUnitId(null)}
       />
       <NewUnitDialog
         open={dialog === 'newUnit'}

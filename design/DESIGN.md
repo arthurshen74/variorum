@@ -674,7 +674,7 @@ considered and rejected: configurations are interface-only by invariant
 obvious clicks — a form is the honest tool.
 
 **The Configurations dialog** opens from the sidebar's gear button and has
-four views:
+five views:
 
 - **List** — active configurations, each with edit and archive actions;
   archived configurations in a separate group below, each with restore.
@@ -705,6 +705,39 @@ four views:
   device-scoped on purpose — it is which server this machine talks to,
   not part of any configuration's recipe, so it lives outside the
   version history and outside the export.
+- **Database** — a menu entry beside Endpoint, for the whole-database
+  actions. Three separate buttons with three distinct verbs — Replace is
+  never a mode, option, or checkbox of Import, mirroring the repository
+  split (see "Import Is a Merge" and "Replace — the wholesale door"):
+  the UI's shape restates the invariant. Prune is deliberately absent
+  from this slice; it arrives with its export-first flow later.
+  - **Export database** — `exportDatabase` with the picker deliverer
+    ("The Dump Is a File"). A cancelled picker is not an error: the view
+    reports the export as cancelled, and the dirty bit stays set exactly
+    as the repository left it.
+  - **Import (merge)** — `readDumpFile`, then `importDatabase`. A
+    dismissed chooser is a no-op. Success renders the `ImportReport` in
+    the view — additions, fast-forwards, lineage renames, kept-both
+    clones, and the skipped-identical count — because a merge whose
+    outcome you cannot see is a merge you cannot trust
+    (`design/repository-api.ts`). A parse or guard failure renders the
+    thrown message, path and all, and changes nothing.
+  - **Replace from backup** — `readDumpFile`, then an explicit
+    confirmation step naming both consequences: the entire database is
+    replaced by the chosen file, and a pre-replace backup downloads
+    first. Confirm calls `replaceDatabase` with the anchor deliverer;
+    Cancel discards the parsed dump and touches nothing. File first,
+    confirmation second, so the user approves a wipe only against a file
+    that at least parsed — a malformed file fails before anyone is asked
+    to confirm anything.
+
+Each Database action reports its outcome inline in the view — success,
+cancellation, or the error message — and the dialog never closes itself
+on completion. One action runs at a time; the buttons disable while one
+is in flight. A successful replace additionally deselects the active
+unit: the shell's selection is a pointer into a database that no longer
+exists, and whether the new database happens to contain the same uuid is
+coincidence, not continuity.
 
 Validation sits at the form (a system boundary): name, artifact type, and
 model name must be non-empty; sampling fields are free-text numbers where

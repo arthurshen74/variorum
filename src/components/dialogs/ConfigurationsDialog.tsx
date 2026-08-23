@@ -40,6 +40,8 @@ import {
 export interface ConfigurationsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** A successful replace invalidated the shell's unit selection. */
+  onReplaced: () => void;
 }
 
 type View =
