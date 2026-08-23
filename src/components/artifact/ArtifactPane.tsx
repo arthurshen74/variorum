@@ -173,6 +173,9 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
         unit={unit}
         open={historyOpen}
         onOpenChange={setHistoryOpen}
+        onView={() => {
+          throw new Error('not implemented: onView');
+        }}
       />
       <Dialog open={collision}>
         {/* Undismissable: leaving without choosing would re-prompt on the

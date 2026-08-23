@@ -15,12 +15,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { repository } from '@/persistence/repository';
-import type { Unit } from '@design/repository-api';
+import type { Artifact, Unit } from '@design/repository-api';
 
 interface HistoryDialogProps {
   unit: Unit;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** View action: the pane gates, seats the buffer, and closes the dialog. */
+  onView: (artifact: Artifact) => void;
 }
 
 export function HistoryDialog({

@@ -1447,11 +1447,48 @@ header (beside Save) opens a dialog — dialogs over the main pane, per
 "UI"; no routing — listing every revision, newest first: version
 designator, saved time, and source (`llm` or `manual`). Broken
 revisions are listed like any other; history does not judge content.
-Each row has a Restore action, no confirmation: the inverse of a wrong
-restore is one more restore, the same reasoning that exempts
-configuration archive from confirmation. No diff view, no preview pane
-— version, time, and source are enough to find "the one before the bad
-one", and anything richer is a future slice on top of the same dialog.
+Each row has two actions. Restore, no confirmation: the inverse of a
+wrong restore is one more restore, the same reasoning that exempts
+configuration archive from confirmation; disabled on the latest
+revision, whose restore would mint nothing. And View (below), enabled
+on every row including the latest, where it doubles as "take the
+editor back to latest". No diff view, no preview pane — version, time,
+and source are enough to find "the one before the bad one", and
+anything richer is a future slice on top of the same dialog.
+
+**View seats the buffer; it does not fork the pane.** View closes the
+dialog and puts the chosen revision's content into the artifact pane's
+working copy — the same single buffer, fully editable, no read-only
+mode, no new pane mode. Everything downstream is existing machinery:
+Save is the one manual-save path and mints a new revision from
+wherever the buffer stands (so View then Save IS Restore), and a
+revision landing under a viewed buffer goes through the same
+clean-follow / keep-or-take logic as any other divergent working copy.
+The alternative — a distinct read-only viewing mode with its own
+chrome and an "edit this version" step — was rejected: it duplicates
+the buffer's job and adds a mode granting no capability the buffer
+doesn't already have.
+
+Two boundaries drawn deliberately:
+
+- **The one confirmation in the history surface.** If the working copy
+  holds unsaved EDITS when View is clicked, a dialog offers
+  discard-and-view or cancel. Restore is exempt from confirmation
+  because a wrong restore is invertible; unsaved edits are the single
+  thing View can destroy, so View alone earns the prompt. Two cases
+  deliberately skip it: a clean buffer, and a buffer holding a viewed
+  revision the user has not touched — that content is an old revision,
+  recoverable from History forever, so swapping one view for another
+  destroys nothing.
+- **The chip is version-aware.** While the buffer holds a viewed
+  revision untouched, the header chip reads "viewing vN" instead of
+  "unsaved"; the first edit demotes it to the ordinary "unsaved". The
+  pane remembers the viewed designator for exactly that long — cleared
+  by any edit and by every buffer reseed (a save landing, keep-or-take
+  resolution, unit switch). Save's enablement is untouched: keyed to
+  working-differs-from-latest as ever, so viewing a revision whose
+  bytes happen to equal the latest honestly shows "viewing vN" with
+  Save disabled — that save would mint nothing.
 
 **Restore lands like any other revision.** The minted revision flows
 through the artifact pane's existing buffer logic: a clean working copy
