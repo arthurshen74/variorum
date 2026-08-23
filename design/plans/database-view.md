@@ -16,7 +16,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 - Tests: src/components/dialogs/database-actions.test.ts — filter:
   npx vitest run -t "[G1]"
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-08-23)
 
 ### G2 — dialog view, gear button, shell wiring
 - Intent: the fifth dialog view, the sidebar gear icon, and
