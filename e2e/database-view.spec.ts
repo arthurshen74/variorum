@@ -298,6 +298,9 @@ test('[G2] a successful replace deselects the active unit', async ({
   await dialog.getByRole('button', { name: 'Confirm replace' }).click();
   await expect(dialog.getByRole('status')).toBeVisible();
 
+  // The dialog is modal: the shell is out of the accessibility tree until
+  // it closes, so read the heading after closing, not through the modal.
+  await page.keyboard.press('Escape');
   await expect(
     page.getByRole('heading', { name: 'Variorum', exact: true }),
   ).toBeVisible();

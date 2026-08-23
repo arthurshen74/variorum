@@ -4,7 +4,7 @@
  * write is the inline rename editor, which calls the repository directly.
  */
 import { useState } from 'react';
-import { ArchiveIcon, PencilIcon } from 'lucide-react';
+import { ArchiveIcon, PencilIcon, SettingsIcon } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import type { Unit } from '@/domain/types';
 import { repository } from '@/persistence/repository';
@@ -142,9 +142,10 @@ export default function Sidebar({
         <button
           type="button"
           onClick={onOpenConfigurations}
-          className="w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
+          className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
         >
-          Configurations
+          <SettingsIcon aria-hidden="true" className="size-4" />
+          <span className="sr-only">Configurations</span>
         </button>
         <div className="flex items-center justify-between px-2 py-1.5">
           <label

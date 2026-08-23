@@ -27,7 +27,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 - Tests: e2e/database-view.spec.ts — filter:
   npx playwright test --grep "\[G2\]" e2e/database-view.spec.ts
 - Depends on: G1
-- Status: RED
+- Status: GREEN (2026-08-23)
 
 ## Order
 
@@ -41,4 +41,14 @@ name); outcomes render under role="status", errors under role="alert";
 the replace confirmation's buttons are "Confirm replace" and "Cancel".
 
 ## Amendments
+
+- 2026-08-23 — e2e/database-view.spec.ts, "[G2] a successful replace
+  deselects the active unit": press Escape between the status assertion
+  and the shell-heading assertion. The dialog is a modal Radix Dialog, so
+  while it is open the shell is `aria-hidden` and no role query can reach
+  the heading; the test asserted the dialog stayed open and then read
+  through it. The two sibling tests in the file already close the dialog
+  before reading shell state. No spec delta: "a successful replace
+  deselects the active unit" and "the dialog never closes itself on
+  completion" both stand unchanged, and both assertions still hold.
 

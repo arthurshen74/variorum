@@ -1,7 +1,7 @@
 /**
- * The Configurations dialog (DESIGN.md "Management UI"): four views —
- * List, Add, Edit, Endpoint. Draft state is component state here and
- * dies with the dialog; every mutation goes through the repository.
+ * The Configurations dialog (DESIGN.md "Management UI"): five views —
+ * List, Add, Edit, Endpoint, Database. Draft state is component state here
+ * and dies with the dialog; every mutation goes through the repository.
  */
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ import {
 import { repository } from '@/persistence/repository';
 import { selectConfiguration, selectLatestVersion } from '@/state/selectors';
 import { useVariorum, variorumStore } from '@/state/store';
+import DatabaseView from './DatabaseView';
 import {
   draftEqualsVersion,
   formValuesFromVersion,
@@ -48,7 +49,8 @@ type View =
   | { kind: 'list' }
   | { kind: 'add' }
   | { kind: 'edit'; name: string }
-  | { kind: 'endpoint' };
+  | { kind: 'endpoint' }
+  | { kind: 'database' };
 
 type FieldErrors = Partial<Record<keyof ConfigurationFormValues, string>>;
 
@@ -85,6 +87,7 @@ const ROW_CLASS = 'flex items-center gap-2 rounded-md border px-2 py-1.5';
 export default function ConfigurationsDialog({
   open,
   onOpenChange,
+  onReplaced,
 }: ConfigurationsDialogProps) {
   const configurations = useVariorum((s) => s.configurations);
   const [view, setView] = useState<View>({ kind: 'list' });
@@ -228,6 +231,13 @@ export default function ConfigurationsDialog({
               </Button>
               <Button size="sm" variant="outline" onClick={showEndpoint}>
                 Endpoint
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setView({ kind: 'database' })}
+              >
+                Database
               </Button>
             </div>
             {active.length === 0 ? (
@@ -456,6 +466,10 @@ export default function ConfigurationsDialog({
               </Button>
             </DialogFooter>
           </>
+        )}
+
+        {view.kind === 'database' && (
+          <DatabaseView onReplaced={onReplaced} onBack={showList} />
         )}
 
         {view.kind === 'endpoint' && (
