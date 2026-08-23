@@ -12,7 +12,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 - Tests: src/components/artifact/view-buffer.test.ts, e2e/view-revision.spec.ts — filters: npx vitest run -t "[G1]" /
   npx playwright test --grep "\[G1\]"
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-08-23)
 
 ## Order
 

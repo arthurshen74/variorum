@@ -8,6 +8,10 @@
  * step 5): silently while the buffer is clean, and behind a keep-or-take
  * prompt while it is dirty. The revision itself is already captured by
  * the repository — the prompt only decides what the buffer shows.
+ *
+ * View (DESIGN.md "Revision History & Restore") seats an old revision in
+ * that same buffer — no second buffer, no read-only mode — behind a
+ * confirmation when it would destroy unsaved edits.
  */
 import { Suspense, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -24,22 +28,18 @@ import { selectConfiguration, selectUnit } from '@/state/selectors';
 import { applicableExtensions } from '@/extensions/registry';
 import type { ExtensionContext } from '@/extensions/extension';
 import { repository } from '@/persistence/repository';
+import type { Artifact } from '@design/repository-api';
 import { HistoryDialog } from './HistoryDialog';
 import { ParseFailureBanner } from './ParseFailureBanner';
+import { chipFor, viewGateFor, type ViewBuffer } from './view-buffer';
 
 interface ArtifactPaneProps {
   unitId: string | null;
 }
 
-// The buffer and the revision it was seeded from. `base` is what makes a
-// landing revision detectable: the latest content moving away from it is a
-// new revision, and whether `working` still matches it decides between
-// following silently and prompting.
-interface Buffer {
-  unitId: string | null;
-  base: string;
-  working: string;
-}
+// `base` is what makes a landing revision detectable: the latest content
+// moving away from it is a new revision, and whether `working` still
+// matches it decides between following silently and prompting.
 
 export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
   const unit = useVariorum(
@@ -56,14 +56,25 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
   );
 
   const latestContent = unit?.artifacts.at(-1)?.content ?? '';
-  const seeded: Buffer = {
+  const seeded: ViewBuffer = {
     unitId,
     base: latestContent,
     working: latestContent,
+    viewedVersion: null,
   };
-  const [buffer, setBuffer] = useState<Buffer>(seeded);
+  const [buffer, setBuffer] = useState<ViewBuffer>(seeded);
   const [collision, setCollision] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [pendingView, setPendingView] = useState<Artifact | null>(null);
+
+  function seatView(artifact: Artifact) {
+    setBuffer({
+      unitId,
+      base: latestContent,
+      working: artifact.content,
+      viewedVersion: artifact.version,
+    });
+  }
 
   if (buffer.unitId !== unitId) {
     // The buffer belongs to the unit, not to the pane.
@@ -102,6 +113,7 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
   }
 
   const dirty = buffer.working !== latestContent;
+  const chip = chipFor(buffer, latestContent);
   const ExtensionComponent = activeTab?.component ?? null;
   // First applicable extension declaring the hook owns the verdict.
   const validates = tabs.find((t) => t.validates !== undefined)?.validates;
@@ -124,8 +136,8 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
           </button>
         ))}
         <div className="ml-auto flex items-center gap-2">
-          {dirty ? (
-            <span className="text-xs text-muted-foreground">unsaved</span>
+          {chip !== null ? (
+            <span className="text-xs text-muted-foreground">{chip}</span>
           ) : null}
           <button
             type="button"
@@ -161,7 +173,14 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
             <ExtensionComponent
               content={buffer.working}
               onChange={(next) => {
-                setBuffer((current) => ({ ...current, working: next }));
+                // An editor re-syncing to content the host just seated
+                // echoes it back; only a differing value is an edit, and
+                // only an edit demotes the viewed designator.
+                setBuffer((current) =>
+                  next === current.working
+                    ? current
+                    : { ...current, working: next, viewedVersion: null },
+                );
               }}
               readOnly={false}
               context={context}
@@ -173,10 +192,42 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
         unit={unit}
         open={historyOpen}
         onOpenChange={setHistoryOpen}
-        onView={() => {
-          throw new Error('not implemented: onView');
+        onView={(artifact) => {
+          setHistoryOpen(false);
+          if (viewGateFor(buffer, latestContent) === 'confirm') {
+            setPendingView(artifact);
+          } else {
+            seatView(artifact);
+          }
         }}
       />
+      {pendingView !== null ? (
+        <Dialog open onOpenChange={() => setPendingView(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Discard unsaved edits?</DialogTitle>
+              <DialogDescription>
+                Viewing revision v{pendingView.version} replaces the working
+                copy with that revision's content. Edits you have not saved
+                will be lost.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPendingView(null)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  seatView(pendingView);
+                  setPendingView(null);
+                }}
+              >
+                Discard and view
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
       <Dialog open={collision}>
         {/* Undismissable: leaving without choosing would re-prompt on the
             next render, so the two buttons are the only ways out. */}
@@ -197,7 +248,11 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
             <Button
               variant="outline"
               onClick={() => {
-                setBuffer((current) => ({ ...current, base: latestContent }));
+                setBuffer((current) => ({
+                  ...current,
+                  base: latestContent,
+                  viewedVersion: null,
+                }));
                 setCollision(false);
               }}
             >

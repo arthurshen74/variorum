@@ -19,9 +19,12 @@ export function viewGateFor(
   buffer: ViewBuffer,
   latestContent: string,
 ): ViewGate {
-  void buffer;
-  void latestContent;
-  throw new Error('not implemented: viewGateFor');
+  // An untouched viewed revision is not an edit: its content is an old
+  // revision, recoverable from History, so replacing it destroys nothing.
+  if (buffer.viewedVersion !== null || buffer.working === latestContent) {
+    return 'seat';
+  }
+  return 'confirm';
 }
 
 /** Header chip text: "viewing vN", "unsaved", or null for a clean buffer. */
@@ -29,7 +32,11 @@ export function chipFor(
   buffer: ViewBuffer,
   latestContent: string,
 ): string | null {
-  void buffer;
-  void latestContent;
-  throw new Error('not implemented: chipFor');
+  if (buffer.viewedVersion !== null) {
+    return `viewing v${buffer.viewedVersion}`;
+  }
+  if (buffer.working !== latestContent) {
+    return 'unsaved';
+  }
+  return null;
 }

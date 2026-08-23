@@ -1,8 +1,9 @@
 /**
  * The revision history dialog (DESIGN.md "Revision History & Restore"):
- * every revision newest first — version, time, source — each restorable
- * except the latest. Restore is a manual save of that revision's content;
- * history is never rewritten.
+ * every revision newest first — version, time, source — each viewable, and
+ * each restorable except the latest. Restore is a manual save of that
+ * revision's content; history is never rewritten. View is the pane's
+ * business: this dialog only reports the row that was clicked.
  */
 import type { ReactElement } from 'react';
 
@@ -29,6 +30,7 @@ export function HistoryDialog({
   unit,
   open,
   onOpenChange,
+  onView,
 }: HistoryDialogProps): ReactElement {
   const latestVersion = unit.artifacts.at(-1)?.version;
   const newestFirst = [...unit.artifacts].reverse();
@@ -44,8 +46,9 @@ export function HistoryDialog({
         <DialogHeader>
           <DialogTitle>History</DialogTitle>
           <DialogDescription>
-            Restoring saves that revision's content as a new revision —
-            nothing is rewritten or removed.
+            Viewing puts a revision into the editor; restoring saves that
+            revision's content as a new revision. Nothing is rewritten or
+            removed.
           </DialogDescription>
         </DialogHeader>
         <ul className="max-h-[60vh] divide-y overflow-y-auto">
@@ -61,15 +64,23 @@ export function HistoryDialog({
               <span className="text-xs text-muted-foreground">
                 {artifact.source}
               </span>
-              <Button
-                className="ml-auto"
-                variant="outline"
-                size="sm"
-                disabled={artifact.version === latestVersion}
-                onClick={() => restore(artifact.content)}
-              >
-                Restore
-              </Button>
+              <div className="ml-auto flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onView(artifact)}
+                >
+                  View
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={artifact.version === latestVersion}
+                  onClick={() => restore(artifact.content)}
+                >
+                  Restore
+                </Button>
+              </div>
             </li>
           ))}
         </ul>
