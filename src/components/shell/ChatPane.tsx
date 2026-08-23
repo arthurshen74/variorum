@@ -47,6 +47,10 @@ import { useVariorum } from '@/state/store';
 const MIN_WIDTH_PX = 384;
 const MAX_WIDTH_FRACTION = 0.7;
 
+// Batches useChat UI updates so a fast-streaming endpoint re-renders the
+// transcript at this cadence instead of once per chunk.
+const STREAM_UI_UPDATE_INTERVAL_MS = 100;
+
 interface ChatPaneProps {
   unitId: string | null;
 }
@@ -164,6 +168,7 @@ function UnitChat({ unit, artifactType, modelName }: UnitChatProps) {
     error,
   } = useChat({
     transport,
+    throttle: STREAM_UI_UPDATE_INTERVAL_MS,
     messages: toUIMessages(unit.messages),
     onError: () => dropPendingAssistant(),
     onFinish: ({ message, isAbort, isDisconnect, isError }) => {

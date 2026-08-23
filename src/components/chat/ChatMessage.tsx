@@ -91,7 +91,9 @@ export function ChatMessage({
           </Reasoning>
         ) : null}
         {partitioned.before !== '' ? (
-          <MessageResponse>{partitioned.before}</MessageResponse>
+          <MessageResponse isStreaming={isStreaming}>
+            {partitioned.before}
+          </MessageResponse>
         ) : null}
         {partitioned.artifact !== null ? (
           <ArtifactChip revisionVersion={revisionVersion} />

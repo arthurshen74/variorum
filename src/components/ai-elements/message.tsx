@@ -319,9 +319,16 @@ export const MessageBranchPage = ({
   );
 };
 
-export type MessageResponseProps = ComponentProps<typeof Streamdown>;
+export type MessageResponseProps = ComponentProps<typeof Streamdown> & {
+  isStreaming?: boolean;
+};
 
 const streamdownPlugins = { cjk, code, math, mermaid };
+
+// The code plugin's highlight cache retains every distinct input forever,
+// so a still-growing fence would pin one full token tree per streamed
+// delta. Streaming content renders its code plain instead.
+const streamingPlugins = { cjk, math, mermaid };
 
 // The artifact pane owns file delivery, so responses copy but never
 // download (DESIGN.md "Chat").
@@ -332,20 +339,21 @@ const streamdownControls = {
 };
 
 export const MessageResponse = memo(
-  ({ className, ...props }: MessageResponseProps) => (
+  ({ className, isStreaming = false, ...props }: MessageResponseProps) => (
     <Streamdown
       className={cn(
         "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className
       )}
       controls={streamdownControls}
-      plugins={streamdownPlugins}
+      plugins={isStreaming ? streamingPlugins : streamdownPlugins}
       {...props}
     />
   ),
   (prevProps, nextProps) =>
     prevProps.children === nextProps.children &&
-    nextProps.isAnimating === prevProps.isAnimating
+    nextProps.isAnimating === prevProps.isAnimating &&
+    nextProps.isStreaming === prevProps.isStreaming
 );
 
 MessageResponse.displayName = "MessageResponse";
