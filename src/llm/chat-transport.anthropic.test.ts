@@ -27,7 +27,7 @@ const storage = new Map<string, string>();
 const FULL_VERSION: ConfigurationVersion = {
   name: 'linkml',
   version: 1,
-  modelName: 'claude-mock',
+  modelName: 'local-mock',
   systemPrompt: 'SYSTEM-PROMPT-V1',
   temperature: 0.7,
   topP: 0.9,
@@ -38,7 +38,7 @@ const FULL_VERSION: ConfigurationVersion = {
 const MINIMAL_VERSION: ConfigurationVersion = {
   name: 'linkml',
   version: 1,
-  modelName: 'claude-mock',
+  modelName: 'local-mock',
   systemPrompt: 'SYSTEM-PROMPT-V1',
 };
 
@@ -67,8 +67,14 @@ const BINDING: ModelBinding = {
   apiKey: 'sk-ant-test',
 };
 
-function seedBinding(): void {
-  storage.set('variorum.model.claude-mock', JSON.stringify(BINDING));
+function seedBinding(modelName = 'local-mock'): void {
+  storage.set(`variorum.model.${modelName}`, JSON.stringify(BINDING));
+}
+
+/** The provider gates sampling by model id; each G4 case binds its own. */
+function seedModel(modelName: string, version: ConfigurationVersion): void {
+  seedBinding(modelName);
+  seedStore({ ...version, modelName });
 }
 
 interface Script {
@@ -87,7 +93,7 @@ function anthropicSse(script: Script): string {
         id: 'msg_1',
         type: 'message',
         role: 'assistant',
-        model: 'claude-mock',
+        model: 'local-mock',
         content: [],
         stop_reason: null,
         stop_sequence: null,
@@ -205,7 +211,7 @@ describe('[G2] VariorumChatTransport over Anthropic Messages', () => {
 
     const body = bodies[0];
     if (body === undefined) throw new Error('no request captured');
-    expect(body.model).toBe('claude-mock');
+    expect(body.model).toBe('local-mock');
     expect(JSON.stringify(body.system)).toContain('SYSTEM-PROMPT-V1');
     expect(body.temperature).toBe(0.7);
     expect(body.top_p).toBe(0.9);
@@ -294,8 +300,64 @@ describe('[G2] VariorumChatTransport over Anthropic Messages', () => {
         c.type === 'finish',
     );
     expect(finish?.messageMetadata).toEqual({
-      modelName: 'claude-mock',
+      modelName: 'local-mock',
       usage: { inputTokens: 7, outputTokens: 42, totalTokens: 49 },
     });
+  });
+});
+
+describe('[G4] sampling parameters are model-gated on the Messages wire', () => {
+  beforeEach(() => {
+    storage.clear();
+  });
+
+  async function requestBody(
+    modelName: string,
+    version: ConfigurationVersion,
+  ): Promise<Record<string, unknown>> {
+    seedModel(modelName, version);
+    const { bodies, fetchImpl } = scriptedFetch({ text: ['ok'] });
+    const transport = new VariorumChatTransport('unit-1', { fetchImpl });
+    await collect(await transport.sendMessages(sendOptions()));
+    const body = bodies[0];
+    if (body === undefined) throw new Error('no request captured');
+    return body;
+  }
+
+  it('strips temperature, top_p and top_k for a current-generation Claude id', async () => {
+    const body = await requestBody('claude-sonnet-5', FULL_VERSION);
+    expect('temperature' in body).toBe(false);
+    expect('top_p' in body).toBe(false);
+    expect('top_k' in body).toBe(false);
+  });
+
+  it('treats an unrecognized claude-* id as current-generation', async () => {
+    const body = await requestBody('claude-mock', FULL_VERSION);
+    expect('temperature' in body).toBe(false);
+    expect('top_p' in body).toBe(false);
+    expect('top_k' in body).toBe(false);
+  });
+
+  it('drops top_p but keeps temperature and top_k on a Claude 4.6 id', async () => {
+    const body = await requestBody('claude-sonnet-4-6', FULL_VERSION);
+    expect(body.temperature).toBe(0.7);
+    expect(body.top_k).toBe(40);
+    expect('top_p' in body).toBe(false);
+  });
+
+  it('sends top_p on a Claude 4.6 id when temperature is unset', async () => {
+    const body = await requestBody('claude-sonnet-4-6', {
+      ...MINIMAL_VERSION,
+      topP: 0.9,
+    });
+    expect(body.top_p).toBe(0.9);
+    expect('temperature' in body).toBe(false);
+  });
+
+  it('still sends the output cap and no reasoning knob on a stripped request', async () => {
+    const body = await requestBody('claude-sonnet-5', FULL_VERSION);
+    expect(typeof body.max_tokens).toBe('number');
+    expect('thinking' in body).toBe(false);
+    expect('reasoning_effort' in body).toBe(false);
   });
 });

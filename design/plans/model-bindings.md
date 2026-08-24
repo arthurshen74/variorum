@@ -1,7 +1,8 @@
 # Implementation manifest: model bindings & Anthropic Messages
 
 Spec: DESIGN.md § "LLM Provider Interface", § "Model Bindings", and
-§ "Management UI" (Models view bullet) — approved 2026-08-24
+§ "Management UI" (Models view bullet) — approved 2026-08-24; sampling
+asymmetry bullet under § "LLM Provider Interface" — approved 2026-08-24
 Stubs: src/llm/model-binding.ts, src/llm/transport.ts
 (ANTHROPIC_BROWSER_HEADER, createModel),
 src/components/dialogs/model-binding-form.ts
@@ -53,11 +54,24 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 - Depends on: G1, G2 (the e2e specs exercise the wire end to end)
 - Status: GREEN (2026-08-24)
 
+### G4 — model-gated sampling on the Messages wire
+- Intent: the transport stops splicing temperature/top_p/top_k into the
+  Messages body and hands them to the provider on both wires, so
+  @ai-sdk/anthropic's per-model capability table decides what is sent.
+  No interface change; no stubs.
+- Write scope: src/llm/chat-transport.ts
+- Tests: src/llm/chat-transport.anthropic.test.ts — filter:
+  npx vitest run src/llm/chat-transport.anthropic.test.ts
+  (three [G4] cases are red by assertion; the other two are green
+  against current code and lock the boundary the change must not move)
+- Depends on: G2
+- Status: RED
+
 ## Order
 
 G1 → G2 → G3; each group's surface is the next one's dependency, and the
 write scopes are disjoint, so no pair is parallel-safe in practice — run
-them in order.
+them in order. G4 was planned after G1–G3 went green and follows G2.
 
 Planning-session test changes, recorded: the old Endpoint-view
 acceptance moved out of e2e/management-ui.spec.ts and
@@ -78,3 +92,12 @@ imported, and those legacy globals live in transport.ts, which G2 left
 standing for exactly this run. Added src/components/dialogs/ModelsView.tsx:
 ConfigurationsDialog.tsx was already 530 lines, so the Models view goes in
 its own file per the DatabaseView precedent and CLAUDE.md's size rule.
+
+2026-08-24 — [G2] "carries the recipe on the Messages wire: model, system,
+sampling" (src/llm/chat-transport.anthropic.test.ts), amended at G4
+planning under the approved sampling-asymmetry spec. The file's fixture
+model name changed from `claude-mock` to `local-mock` (version fixtures,
+binding key, SSE echo); expectations unchanged. Why: an unrecognized
+`claude-*` id now strips sampling parameters, so `claude-mock` can no
+longer be the pass-through case — it is G4's unrecognized-id case
+instead. `seedBinding` takes a model name so G4 cases bind their own.

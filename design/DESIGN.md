@@ -31,7 +31,7 @@ api.anthropic.com accepts from a browser origin. Other cloud providers
 (OpenRouter etc.) may still refuse browser origins — the thin-proxy
 note under "Server" stands.
 
-Two protocol asymmetries, settled here:
+Three protocol asymmetries, settled here:
 
 - **The Messages API requires an explicit output cap** — `max_tokens`
   is mandatory on that wire — which collides with "no output cap"
@@ -40,6 +40,24 @@ Two protocol asymmetries, settled here:
   32000, sent only on that protocol. A `length` finish remains a
   FAILED request; nothing else about truncation changes. The
   OpenAI-compatible path still sends no cap.
+- **Sampling parameters are model-gated on the Messages wire.** Which
+  of temperature, top_p, and top_k a Messages endpoint accepts depends
+  on the model generation, not the protocol: Claude 4.7 and later (and
+  the 5 family) reject any of them outright, Claude 4.x through 4.6
+  reject temperature and top_p sent together, and LM Studio's Messages
+  surface takes all three. The transport passes the recipe's three
+  values to the provider on both protocols and lets `@ai-sdk/anthropic`'s
+  per-model capability table decide what reaches the body — the table
+  keys on the model id (`claude-opus-5`, `claude-sonnet-5`, …; an
+  unrecognized `claude-*` id is treated as current-generation; any
+  other id passes everything through). Variorum keeps no capability
+  table of its own: the provider's is the one that tracks the API, and a
+  new model generation is a dependency bump, not a code change. The
+  drop is silent — a dropped field is a provider warning, not an error —
+  so a configuration's sampling sliders are inert on a model that
+  rejects them; surfacing that warning is deferred. The only fields the
+  transport splices into a body itself are the two the OpenAI-compatible
+  provider cannot express (`top_k`, `reasoning_effort`).
 - **Reasoning effort stays best-effort, and currently expresses only
   on the OpenAI-compatible protocol.** The Messages API's reasoning
   knobs are model-generation-specific (fixed budgets vs. adaptive),
@@ -642,7 +660,8 @@ The **version records** (keyed by name + version) are the recipe proper:
 - **system prompt**
 - **sampling parameters** — temperature, top_p, and top_k (top_k isn't
   standard OpenAI, but LM Studio's `/v1/chat/completions` accepts it;
-  the Messages API has it natively).
+  the Messages API has it natively on models that still take sampling
+  parameters at all — see "LLM Provider Interface").
 - **reasoning effort** — stored, but best-effort. As of this writing LM Studio
   ignores `reasoning_effort` on `/v1/chat/completions` (the server's UI
   setting wins) and only honors `reasoning.effort` on the newer `/v1/responses`
