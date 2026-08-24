@@ -5,7 +5,12 @@
  * localStorage access through the model-binding module.
  */
 import type { Configuration, ConfigurationVersion } from '@/domain/types';
-import type { ApiProtocol, ModelBinding } from '@/llm/model-binding';
+import {
+  normalizeApiKey,
+  parseEndpointUrl,
+  type ApiProtocol,
+  type ModelBinding,
+} from '@/llm/model-binding';
 
 export interface ModelBindingDraft {
   api: ApiProtocol;
@@ -16,6 +21,8 @@ export interface ModelBindingDraft {
   maxOutputTokens: string;
 }
 
+const MESSAGES_API: ApiProtocol = 'anthropic-messages';
+
 /**
  * Distinct model names across the LATEST saved version of every
  * configuration, archived included, sorted — the set of models
@@ -25,15 +32,33 @@ export function boundModelNames(
   configurations: Configuration[],
   versions: ConfigurationVersion[],
 ): string[] {
-  void configurations;
-  void versions;
-  throw new Error('not implemented: boundModelNames');
+  const latest = new Map<string, ConfigurationVersion>();
+  for (const version of versions) {
+    const best = latest.get(version.name);
+    if (best === undefined || version.version > best.version) {
+      latest.set(version.name, version);
+    }
+  }
+
+  const names = new Set<string>();
+  for (const configuration of configurations) {
+    const version = latest.get(configuration.name);
+    if (version !== undefined) names.add(version.modelName);
+  }
+  return [...names].sort();
 }
 
 /** Prefill: a stored (or default) binding as field text. */
 export function draftFromBinding(binding: ModelBinding): ModelBindingDraft {
-  void binding;
-  throw new Error('not implemented: draftFromBinding');
+  return {
+    api: binding.api,
+    endpointUrl: binding.endpointUrl,
+    apiKey: binding.apiKey ?? '',
+    maxOutputTokens:
+      binding.maxOutputTokens === undefined
+        ? ''
+        : String(binding.maxOutputTokens),
+  };
 }
 
 /**
@@ -45,6 +70,27 @@ export function draftFromBinding(binding: ModelBinding): ModelBindingDraft {
 export function parseBindingDraft(
   draft: ModelBindingDraft,
 ): ModelBinding | null {
-  void draft;
-  throw new Error('not implemented: parseBindingDraft');
+  const endpointUrl = parseEndpointUrl(draft.endpointUrl);
+  if (endpointUrl === null) return null;
+
+  const apiKey = normalizeApiKey(draft.apiKey);
+
+  // The cap rides on the Messages wire only, so it is parsed only there:
+  // field text stranded by an API switch must not block a save.
+  let maxOutputTokens: number | undefined;
+  if (draft.api === MESSAGES_API) {
+    const cap = draft.maxOutputTokens.trim();
+    if (cap !== '') {
+      const parsed = Number(cap);
+      if (!Number.isFinite(parsed)) return null;
+      maxOutputTokens = parsed;
+    }
+  }
+
+  return {
+    api: draft.api,
+    endpointUrl,
+    ...(apiKey !== null ? { apiKey } : {}),
+    ...(maxOutputTokens !== undefined ? { maxOutputTokens } : {}),
+  };
 }

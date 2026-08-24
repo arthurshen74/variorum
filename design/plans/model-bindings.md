@@ -43,13 +43,15 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
   key, Messages-only max output tokens; Save/Reset). Deletes whatever the
   old Endpoint view still imports.
 - Write scope: src/components/dialogs/model-binding-form.ts,
-  src/components/dialogs/ConfigurationsDialog.tsx
+  src/components/dialogs/ModelsView.tsx,
+  src/components/dialogs/ConfigurationsDialog.tsx,
+  src/llm/transport.ts (deletion only)
 - Tests: src/components/dialogs/model-binding-form.test.ts,
   e2e/model-bindings.spec.ts — filters:
   npx vitest run src/components/dialogs/model-binding-form.test.ts /
   npx playwright test e2e/model-bindings.spec.ts
 - Depends on: G1, G2 (the e2e specs exercise the wire end to end)
-- Status: RED
+- Status: GREEN (2026-08-24)
 
 ## Order
 
@@ -69,3 +71,10 @@ boundary cases were ported verbatim into model-binding.test.ts.
 ## Amendments
 
 <!-- /tdd-implement appends human-approved test amendments here. -->
+
+2026-08-24 — G3 write scope, no test change. Added src/llm/transport.ts
+(deletion only): G3's intent is to delete what the old Endpoint view
+imported, and those legacy globals live in transport.ts, which G2 left
+standing for exactly this run. Added src/components/dialogs/ModelsView.tsx:
+ConfigurationsDialog.tsx was already 530 lines, so the Models view goes in
+its own file per the DatabaseView precedent and CLAUDE.md's size rule.

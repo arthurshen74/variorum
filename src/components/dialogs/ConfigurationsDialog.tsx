@@ -1,6 +1,6 @@
 /**
  * The Configurations dialog (DESIGN.md "Management UI"): five views —
- * List, Add, Edit, Endpoint, Database. Draft state is component state here
+ * List, Add, Edit, Models, Database. Draft state is component state here
  * and dies with the dialog; every mutation goes through the repository.
  */
 import { useState } from 'react';
@@ -15,21 +15,11 @@ import {
 } from '@/components/ui/dialog';
 import { Slider } from '@/components/ui/slider';
 import type { Configuration } from '@/domain/types';
-import {
-  clearApiKey,
-  clearBaseUrl,
-  DEFAULT_BASE_URL,
-  getApiKey,
-  getBaseUrl,
-  normalizeApiKey,
-  parseBaseUrl,
-  setApiKey,
-  setBaseUrl,
-} from '@/llm/transport';
 import { repository } from '@/persistence/repository';
 import { selectConfiguration, selectLatestVersion } from '@/state/selectors';
 import { useVariorum, variorumStore } from '@/state/store';
 import DatabaseView from './DatabaseView';
+import ModelsView from './ModelsView';
 import {
   draftEqualsVersion,
   formValuesFromVersion,
@@ -49,7 +39,7 @@ type View =
   | { kind: 'list' }
   | { kind: 'add' }
   | { kind: 'edit'; name: string }
-  | { kind: 'endpoint' }
+  | { kind: 'models' }
   | { kind: 'database' };
 
 type FieldErrors = Partial<Record<keyof ConfigurationFormValues, string>>;
@@ -73,7 +63,6 @@ const SAMPLING_FIELDS = [
 ] as const;
 
 const FIELD_ERRORS_MESSAGE = 'Fix the highlighted fields.';
-const INVALID_URL_MESSAGE = 'Enter a parseable http or https URL.';
 const UNSET_EFFORT_LABEL = 'unset';
 
 const LABEL_CLASS = 'text-xs font-medium';
@@ -94,8 +83,6 @@ export default function ConfigurationsDialog({
   const [values, setValues] = useState<ConfigurationFormValues>(BLANK_FORM);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [alert, setAlert] = useState<string | null>(null);
-  const [endpointUrl, setEndpointUrl] = useState('');
-  const [endpointKey, setEndpointKey] = useState('');
 
   const active = configurations.filter((c) => !c.archived);
   const archived = configurations.filter((c) => c.archived);
@@ -126,13 +113,6 @@ export default function ConfigurationsDialog({
     setErrors({});
     setAlert(null);
     setView({ kind: 'edit', name: configuration.name });
-  }
-
-  function showEndpoint() {
-    setEndpointUrl(getBaseUrl());
-    setEndpointKey(getApiKey() ?? '');
-    setAlert(null);
-    setView({ kind: 'endpoint' });
   }
 
   // Closing discards the draft, per the hard invariant: nothing is staged,
@@ -192,27 +172,6 @@ export default function ConfigurationsDialog({
     showList();
   }
 
-  function saveEndpoint() {
-    const url = parseBaseUrl(endpointUrl);
-    if (url === null) {
-      setAlert(INVALID_URL_MESSAGE);
-      return;
-    }
-    setBaseUrl(url);
-
-    const key = normalizeApiKey(endpointKey);
-    if (key === null) clearApiKey();
-    else setApiKey(key);
-
-    setAlert(null);
-  }
-
-  function resetEndpoint() {
-    clearBaseUrl();
-    setEndpointUrl(DEFAULT_BASE_URL);
-    setAlert(null);
-  }
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
@@ -229,8 +188,12 @@ export default function ConfigurationsDialog({
               <Button size="sm" onClick={showAdd}>
                 New configuration
               </Button>
-              <Button size="sm" variant="outline" onClick={showEndpoint}>
-                Endpoint
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setView({ kind: 'models' })}
+              >
+                Models
               </Button>
               <Button
                 size="sm"
@@ -472,58 +435,7 @@ export default function ConfigurationsDialog({
           <DatabaseView onReplaced={onReplaced} onBack={showList} />
         )}
 
-        {view.kind === 'endpoint' && (
-          <>
-            <DialogHeader>
-              <DialogTitle>Endpoint</DialogTitle>
-              <DialogDescription>
-                Which OpenAI-compatible server this device talks to. Device
-                state — outside every configuration and every export.
-              </DialogDescription>
-            </DialogHeader>
-            {alert !== null && (
-              <p role="alert" className={ALERT_CLASS}>
-                {alert}
-              </p>
-            )}
-            <div className="grid gap-1">
-              <label htmlFor="endpoint-url" className={LABEL_CLASS}>
-                Endpoint URL
-              </label>
-              <input
-                id="endpoint-url"
-                className={INPUT_CLASS}
-                value={endpointUrl}
-                onChange={(event) => setEndpointUrl(event.target.value)}
-              />
-            </div>
-            <div className="grid gap-1">
-              <label htmlFor="api-key" className={LABEL_CLASS}>
-                API key
-              </label>
-              <input
-                id="api-key"
-                type="password"
-                className={INPUT_CLASS}
-                value={endpointKey}
-                onChange={(event) => setEndpointKey(event.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Leave empty for servers that need no key, such as LM Studio.
-                Saving an empty field removes the stored key.
-              </p>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={showList}>
-                Back
-              </Button>
-              <Button variant="outline" onClick={resetEndpoint}>
-                Reset to default
-              </Button>
-              <Button onClick={saveEndpoint}>Save</Button>
-            </DialogFooter>
-          </>
-        )}
+        {view.kind === 'models' && <ModelsView onBack={showList} />}
       </DialogContent>
     </Dialog>
   );
