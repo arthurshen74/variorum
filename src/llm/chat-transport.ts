@@ -25,9 +25,8 @@ import type { UsageMetadata } from './token-usage';
 import { DEFAULT_MAX_OUTPUT_TOKENS, getModelBinding } from './model-binding';
 import { createModel } from './transport';
 
-// Recipe fields the SDK providers drop, spliced back into the body below.
-const BODY_TEMPERATURE = 'temperature';
-const BODY_TOP_P = 'top_p';
+// Recipe fields the OpenAI-compatible provider drops, spliced back into
+// the body below.
 const BODY_TOP_K = 'top_k';
 const BODY_REASONING_EFFORT = 'reasoning_effort';
 
@@ -43,26 +42,6 @@ function openAiExtraBodyFields(
     ...(version.reasoningEffort !== undefined
       ? { [BODY_REASONING_EFFORT]: version.reasoningEffort }
       : {}),
-  };
-}
-
-/**
- * The Anthropic provider strips every sampling parameter from a model id
- * its capability table does not recognize — which is every id LM Studio's
- * Messages surface serves — so all three ride in the body instead. No
- * reasoning knob: the Messages reasoning controls are
- * model-generation-specific and the wrong one is a 400 (DESIGN.md "LLM
- * Provider Interface").
- */
-function messagesExtraBodyFields(
-  version: ConfigurationVersion,
-): Record<string, unknown> {
-  return {
-    ...(version.temperature !== undefined
-      ? { [BODY_TEMPERATURE]: version.temperature }
-      : {}),
-    ...(version.topP !== undefined ? { [BODY_TOP_P]: version.topP } : {}),
-    ...(version.topK !== undefined ? { [BODY_TOP_K]: version.topK } : {}),
   };
 }
 
@@ -164,26 +143,28 @@ export class VariorumChatTransport implements ChatTransport<UIMessage> {
     const version = this.latestVersion();
     const binding = getModelBinding(version.modelName);
     const messagesWire = binding.api === 'anthropic-messages';
-    const fetchImpl = withExtraBodyFields(
-      this.deps.fetchImpl ?? globalThis.fetch,
-      messagesWire
-        ? messagesExtraBodyFields(version)
-        : openAiExtraBodyFields(version),
-    );
+    const baseFetch = this.deps.fetchImpl ?? globalThis.fetch;
+    const fetchImpl = messagesWire
+      ? baseFetch
+      : withExtraBodyFields(baseFetch, openAiExtraBodyFields(version));
 
     const result = streamText({
       model: createModel(binding, version.modelName, fetchImpl),
       system: version.systemPrompt,
       messages: toModelMessages(options.messages),
-      // The Messages API makes max_tokens mandatory and takes its sampling
-      // parameters through the splice above; the OpenAI-compatible wire
-      // sends no output cap at all.
+      temperature: version.temperature,
+      topP: version.topP,
+      // The Messages API makes max_tokens mandatory, and gates sampling by
+      // model id inside the provider — topK goes through it rather than the
+      // splice so that gate can see it. The OpenAI-compatible wire sends no
+      // output cap at all.
       ...(messagesWire
         ? {
             maxOutputTokens:
               binding.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
+            topK: version.topK,
           }
-        : { temperature: version.temperature, topP: version.topP }),
+        : {}),
       abortSignal: options.abortSignal,
       // A failed request is a boundary the user resolves with Retry, not
       // something the SDK re-attempts behind their back — silent retries

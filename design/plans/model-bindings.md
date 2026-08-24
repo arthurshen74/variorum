@@ -65,7 +65,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
   (three [G4] cases are red by assertion; the other two are green
   against current code and lock the boundary the change must not move)
 - Depends on: G2
-- Status: RED
+- Status: GREEN (2026-08-24)
 
 ## Order
 
