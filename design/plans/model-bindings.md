@@ -35,7 +35,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
   src/llm/chat-transport.anthropic.test.ts — filters:
   npx vitest run src/llm/transport.test.ts src/llm/chat-transport.anthropic.test.ts
 - Depends on: G1
-- Status: RED
+- Status: GREEN (2026-08-24)
 
 ### G3 — Models view
 - Intent: the Configurations dialog swaps the Endpoint view for the

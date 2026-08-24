@@ -1,11 +1,13 @@
 /**
  * The custom ChatTransport (DESIGN.md "Chat"): calls streamText in the
- * browser against the OpenAI-compatible endpoint — no server route. The
- * request is built from the LATEST SAVED version of the unit's
- * configuration at call time: model id, system prompt, sampling
- * parameters, reasoning effort. Reasoning parts are stripped from the
- * request context (never re-sent). This class is the designated seam: the
- * single file that would change if requests ever routed through a proxy.
+ * browser against the endpoint the model is bound to — no server route.
+ * The request is built from the LATEST SAVED version of the unit's
+ * configuration at call time (model id, system prompt, sampling
+ * parameters, reasoning effort) and from the model's binding, resolved at
+ * the same moment (DESIGN.md "Model Bindings"). Reasoning parts are
+ * stripped from the request context (never re-sent). This class is the
+ * designated seam: the single file that would change if requests ever
+ * routed through a proxy.
  */
 import { streamText, toUIMessageStream } from 'ai';
 import type {
@@ -20,15 +22,20 @@ import { selectLatestVersion, selectUnit } from '@/state/selectors';
 import type { ConfigurationVersion } from '@/domain/types';
 import { toModelMessages } from './mapping';
 import type { UsageMetadata } from './token-usage';
-import { createProvider } from './transport';
+import { DEFAULT_MAX_OUTPUT_TOKENS, getModelBinding } from './model-binding';
+import { createModel } from './transport';
 
-// OpenAI-compatible request body fields the SDK provider will not send:
-// it reports topK as unsupported, and reaches reasoning effort only
-// through a provider-name-keyed option. Both are spliced in below.
+// Recipe fields the SDK providers drop, spliced back into the body below.
+const BODY_TEMPERATURE = 'temperature';
+const BODY_TOP_P = 'top_p';
 const BODY_TOP_K = 'top_k';
 const BODY_REASONING_EFFORT = 'reasoning_effort';
 
-function extraBodyFields(
+/**
+ * The OpenAI-compatible provider reports topK as unsupported, and reaches
+ * reasoning effort only through a provider-name-keyed option.
+ */
+function openAiExtraBodyFields(
   version: ConfigurationVersion,
 ): Record<string, unknown> {
   return {
@@ -36,6 +43,26 @@ function extraBodyFields(
     ...(version.reasoningEffort !== undefined
       ? { [BODY_REASONING_EFFORT]: version.reasoningEffort }
       : {}),
+  };
+}
+
+/**
+ * The Anthropic provider strips every sampling parameter from a model id
+ * its capability table does not recognize — which is every id LM Studio's
+ * Messages surface serves — so all three ride in the body instead. No
+ * reasoning knob: the Messages reasoning controls are
+ * model-generation-specific and the wrong one is a 400 (DESIGN.md "LLM
+ * Provider Interface").
+ */
+function messagesExtraBodyFields(
+  version: ConfigurationVersion,
+): Record<string, unknown> {
+  return {
+    ...(version.temperature !== undefined
+      ? { [BODY_TEMPERATURE]: version.temperature }
+      : {}),
+    ...(version.topP !== undefined ? { [BODY_TOP_P]: version.topP } : {}),
+    ...(version.topK !== undefined ? { [BODY_TOP_K]: version.topK } : {}),
   };
 }
 
@@ -135,19 +162,28 @@ export class VariorumChatTransport implements ChatTransport<UIMessage> {
     options: Parameters<ChatTransport<UIMessage>['sendMessages']>[0],
   ): Promise<ReadableStream<UIMessageChunk>> {
     const version = this.latestVersion();
-    const provider = createProvider(
-      withExtraBodyFields(
-        this.deps.fetchImpl ?? globalThis.fetch,
-        extraBodyFields(version),
-      ),
+    const binding = getModelBinding(version.modelName);
+    const messagesWire = binding.api === 'anthropic-messages';
+    const fetchImpl = withExtraBodyFields(
+      this.deps.fetchImpl ?? globalThis.fetch,
+      messagesWire
+        ? messagesExtraBodyFields(version)
+        : openAiExtraBodyFields(version),
     );
 
     const result = streamText({
-      model: provider(version.modelName),
+      model: createModel(binding, version.modelName, fetchImpl),
       system: version.systemPrompt,
       messages: toModelMessages(options.messages),
-      temperature: version.temperature,
-      topP: version.topP,
+      // The Messages API makes max_tokens mandatory and takes its sampling
+      // parameters through the splice above; the OpenAI-compatible wire
+      // sends no output cap at all.
+      ...(messagesWire
+        ? {
+            maxOutputTokens:
+              binding.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
+          }
+        : { temperature: version.temperature, topP: version.topP }),
       abortSignal: options.abortSignal,
       // A failed request is a boundary the user resolves with Retry, not
       // something the SDK re-attempts behind their back — silent retries
