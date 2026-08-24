@@ -33,8 +33,9 @@ either approach.
 ## Architecture
 
 I'm keeping this VERY simple. SPA — React/Tailwind/Vite/shadcn/Vercel
-AI Elements — talking directly to an OpenAI-compatible endpoint
-(LM Studio, to start). No server: this tool talks to `localhost`, and a
+AI Elements — talking directly to an OpenAI-compatible or Anthropic
+Messages endpoint (LM Studio, to start). No server: this tool talks to
+`localhost`, and a
 backend here would be a proxy from your machine to your machine.
 Persistence is a single IndexedDB database holding everything —
 conversations, artifact revision histories, and versioned configurations —

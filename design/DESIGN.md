@@ -12,30 +12,78 @@ persistence (see State Architecture below).
 
 ## LLM Provider Interface
 
-I'm going with an OpenAI compatible API. Beware of CORS! The idea is that we
-are using local models so we can control directly the CORS setup. However, if
-you want to connect this to something like OpenRouter, this might be an issue.
-If you want to use this project in this way, you should be aware of the issue.
+Two wire protocols, chosen per model: the OpenAI-compatible
+chat-completions API (LM Studio first) and the Anthropic Messages API
+(api.anthropic.com, or LM Studio's Anthropic-compatible surface). Which
+protocol a request speaks — and which server it reaches — is a property
+of the MODEL the active configuration version names, resolved through
+that model's binding at request time (see "Model Bindings"). The
+transport keeps one provider per protocol: `@ai-sdk/openai-compatible`
+as before, and `@ai-sdk/anthropic` (dependency human-approved) for
+Messages — both plug into the same `streamText` path, so the chat
+pipeline above the provider does not fork.
 
-## API Keys & Endpoint URL
+Beware of CORS! The idea is that we are using local models so we can
+control directly the CORS setup. Anthropic's hosted API is the
+sanctioned exception: the provider sends
+`anthropic-dangerous-direct-browser-access: true`, which
+api.anthropic.com accepts from a browser origin. Other cloud providers
+(OpenRouter etc.) may still refuse browser origins — the thin-proxy
+note under "Server" stands.
 
-Two pieces of LLM plumbing are device state, not user data: the API key
-(`variorum.apiKey`) and the endpoint base URL (`variorum.baseUrl`). Both
-live in localStorage, beside the theme preference — residents of
-the same seam (see "Theming" for why that placement is structural: device
-state can never appear in an export and never trips the
-dirty-since-export bit, because export dumps IndexedDB and IndexedDB
-never holds it). When no URL is stored, the default
-`http://localhost:1234/v1` (LM Studio's default) applies; "reset" means
-removing the stored value so the default shows through, not writing a
-copy of it.
+Two protocol asymmetries, settled here:
 
-The key has no default and no placeholder: when none is stored, requests
-carry no `Authorization` header at all. LM Studio needs none, and an
-endpoint that does require one answers with its own auth error — the
-honest signal, better than a made-up `Bearer` value muddying it. Saving
-an empty key field removes the stored value; empty and unset are the
-same state, and a whitespace-only entry counts as empty.
+- **The Messages API requires an explicit output cap** — `max_tokens`
+  is mandatory on that wire — which collides with "no output cap"
+  under "Truncation discards, too". The binding carries it: an
+  `anthropic-messages` binding has a `maxOutputTokens` field, default
+  32000, sent only on that protocol. A `length` finish remains a
+  FAILED request; nothing else about truncation changes. The
+  OpenAI-compatible path still sends no cap.
+- **Reasoning effort stays best-effort, and currently expresses only
+  on the OpenAI-compatible protocol.** The Messages API's reasoning
+  knobs are model-generation-specific (fixed budgets vs. adaptive),
+  and sending the wrong one is a 400; mapping effort tiers onto them
+  is deferred until a real model needs it. Reasoning CONTENT streaming
+  back is captured on both protocols, unchanged.
+
+## Model Bindings
+
+Where a request goes is bound to the MODEL NAME, not to the app: a
+model binding is device state in localStorage under
+`variorum.model.<modelName>` — a JSON record
+`{ api, endpointUrl, apiKey?, maxOutputTokens? }`, where `api` is
+`openai-compatible` or `anthropic-messages`. The configuration version
+names the model (immutable recipe); the binding says how THIS MACHINE
+reaches that model. Same seam as the theme and the token-ratio
+calibration, and the placement is structural for the same reasons:
+device state can never appear in an export and never trips the
+dirty-since-export bit (see "Theming").
+
+An IndexedDB `models` collection was considered and rejected: bindings
+are machine facts — localhost ports, with API keys riding beside them —
+and a fourth object store would drag the dump envelope, the
+hand-written validator, and the merge along for data that does not
+belong in a backup. The exactly-three-stores invariant stands.
+
+When no binding is stored for a model, the default applies:
+`openai-compatible` at `http://localhost:1234/v1` (LM Studio's
+default), no key. "Reset" means removing the binding so the default
+shows through, not writing a copy of it. The old global keys
+(`variorum.baseUrl`, `variorum.apiKey`) are dead: ignored if present,
+never migrated, never written.
+
+The key lives inside the binding, optional, with no default and no
+placeholder: when absent, requests carry no auth header at all
+(`Authorization: Bearer` on OpenAI-compatible, `x-api-key` on
+Messages). LM Studio needs none on either surface, and an endpoint
+that does require one answers with its own auth error — the honest
+signal, better than a made-up value muddying it. Saving an empty key
+field removes the key; empty and unset are the same state, and a
+whitespace-only entry counts as empty. Two models served by the same
+provider each hold their own copy of the key — the duplication is the
+price of one-record-per-model, and it is device-local duplication of a
+value that never travels anyway.
 
 On the keys: be aware of XSS risks here. I will be imposing npm lockfile
 discipline for myself but if you are forking this, please be careful.
@@ -77,7 +125,7 @@ The app renders in a light or dark theme. A device-level setting offers
 **auto | light | dark**, default **auto**: auto follows the browser's
 `prefers-color-scheme` and reacts live if it flips mid-session; light and
 dark override it. The preference persists in localStorage
-(`variorum.theme`), beside the API keys — it is a _device_ preference, not
+(`variorum.theme`), beside the model bindings — it is a _device_ preference, not
 user data. That placement makes two properties structural rather than
 enforced: it can never appear in an export (export dumps the IndexedDB
 database, which the theme never touches), and changing it never trips the
@@ -97,7 +145,7 @@ first render, so there is no light flash on a dark boot.
 copy of the database, and the repository is its only writer; the theme has
 no database presence, so it stays out entirely. The settings control reads
 and writes through the theme module directly — the same pattern as the
-API-key fields and `transport.ts`.
+model-binding fields and `transport.ts`.
 
 **The editor pane follows for free — almost.** Extensions may not import
 the store or receive a theme prop (the contract grows only on a second
@@ -159,11 +207,11 @@ fallback. Three decisions worth recording:
 Everything lives in a single IndexedDB database. One database, one export, one
 thing to reason about. Configurations (see below) live in that same database
 rather than off in localStorage — one persistence layer, one import/export
-path. The only things outside it are the localStorage residents — API
-key, endpoint URL, theme preference, and per-unit extension layout state
-(see "Extension device state" under Extensions) — which are device state
-and deliberately barred from the export path (see "API Keys & Endpoint
-URL").
+path. The only things outside it are the localStorage residents — model
+bindings (endpoint URL, API kind, key), theme preference, and per-unit
+extension layout state (see "Extension device state" under Extensions) —
+which are device state and deliberately barred from the export path (see
+"Model Bindings").
 
 **Schema.** The exact shapes — the three collections (configurations — name
 records, configurationVersions, units) and the inlined Message/Artifact
@@ -585,12 +633,16 @@ versions:
 
 The **version records** (keyed by name + version) are the recipe proper:
 
-- **model identifier** — which model LM Studio should run. Deliberately
-  _inside_ the version: swapping qwen for llama changes behavior more
-  than any temperature tweak, so it versions like everything else.
+- **model identifier** — which model the endpoint should run.
+  Deliberately _inside_ the version: swapping qwen for llama changes
+  behavior more than any temperature tweak, so it versions like
+  everything else. Also the name the transport resolves a model binding
+  through (see "Model Bindings") — the recipe names the model; the
+  machine says where it lives.
 - **system prompt**
 - **sampling parameters** — temperature, top_p, and top_k (top_k isn't
-  standard OpenAI, but LM Studio's `/v1/chat/completions` accepts it).
+  standard OpenAI, but LM Studio's `/v1/chat/completions` accepts it;
+  the Messages API has it natively).
 - **reasoning effort** — stored, but best-effort. As of this writing LM Studio
   ignores `reasoning_effort` on `/v1/chat/completions` (the server's UI
   setting wins) and only honors `reasoning.effort` on the newer `/v1/responses`
@@ -694,17 +746,22 @@ five views:
   nothing. The UI does the comparison because the repository method is
   deliberately an unconditional append — "a Save that changes nothing
   mints nothing" is the dialog's promise here.
-- **Endpoint** — a menu entry beside the configuration list, for the two
-  global LLM settings: the endpoint base URL and the API key (device
-  state; see "API Keys & Endpoint URL"). A URL field prefilled with the
-  effective value; Save requires a parseable http(s) URL and stores it;
-  Reset to default removes the stored value. Below it, an API key field
-  (password input) prefilled with the stored key; Save stores the
-  trimmed value, or removes the stored key when the field is empty —
-  unset-key semantics per "API Keys & Endpoint URL". Global and
-  device-scoped on purpose — it is which server this machine talks to,
-  not part of any configuration's recipe, so it lives outside the
-  version history and outside the export.
+- **Models** — a menu entry beside the configuration list (replacing
+  the old global Endpoint view), for the per-model bindings (device
+  state; see "Model Bindings"). One section per distinct model name
+  across the latest saved version of every configuration, archived
+  included — the set of models generation can currently target;
+  binding a model no configuration names is not a flow (create the
+  configuration first). Each section shows the effective binding,
+  stored or default: an API selector (openai-compatible |
+  anthropic-messages), an endpoint URL field, an API key field
+  (password input), and — when the API is anthropic-messages — a max
+  output tokens field. Save requires a parseable http(s) URL and
+  stores the whole binding under `variorum.model.<modelName>`; an
+  empty key field means no key. Reset removes the binding so the
+  default shows through. Device-scoped on purpose — how this machine
+  reaches a model is not part of any configuration's recipe, so it
+  lives outside the version history and outside the export.
 - **Database** — a menu entry beside Endpoint, for the whole-database
   actions. Three separate buttons with three distinct verbs — Replace is
   never a mode, option, or checkbox of Import, mirroring the repository
@@ -836,7 +893,9 @@ ignores it, behavior degrades exactly to the old heuristic, never worse.
    with the latest saved version of the unit's configuration.
 2. The transport builds the request from that same version: model id,
    system prompt, sampling parameters, reasoning effort — plus the unit's
-   full message history. Nothing is hardcoded; the recipe is the config.
+   full message history — and resolves the model id's binding to pick
+   the protocol, endpoint, and key (see "Model Bindings"). Nothing is
+   hardcoded; the recipe is the config, the binding is the machine.
 3. While waiting, the Loader animates (`useChat` status `submitted`);
    once streaming, text and reasoning deltas render live. Streaming state
    lives entirely in `useChat` (see State Architecture) — nothing touches
@@ -1031,8 +1090,9 @@ server's exact figures once it completes.
 What the wire allows dictates the shape. No OpenAI-compatible surface
 streams a running count: usage arrives exactly once, in a terminal SSE
 chunk, and only when the request opts in via
-`stream_options.include_usage` — so the provider is created with
-`includeUsage: true`. (The engine counts every token — llama.cpp's
+`stream_options.include_usage` — so the OpenAI-compatible provider is
+created with `includeUsage: true`; the Messages API delivers usage on
+its terminal events without an opt-in. (The engine counts every token — llama.cpp's
 `n_decoded` — but serializes it only to the server's dev log; LM
 Studio's native REST and Anthropic-compatible surfaces likewise deliver
 stats only in terminal events.) Everything below follows: the live
@@ -1249,7 +1309,7 @@ src/
 │   ├── store.ts                 # the Zustand store + the dirty-since-export bit
 │   └── selectors.ts             # ALL reads
 ├── llm/
-│   ├── transport.ts             # OpenAI-compatible endpoint config; key from localStorage
+│   ├── transport.ts             # model bindings; one provider per binding's protocol
 │   ├── tools.ts                 # the model's four tools; the HITL gate hook
 │   └── mapping.ts               # SDK boundary → AssistantCompletion
 ├── extensions/                  # the plugin surface — see Extensions

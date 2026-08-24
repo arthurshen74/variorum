@@ -1,8 +1,8 @@
 # CLAUDE.md
 
 Variorum is a single-file artifact editor: an SPA (React / TypeScript strict /
-Tailwind / Vite / shadcn / Vercel AI Elements) talking directly to an
-OpenAI-compatible LLM endpoint (LM Studio first). There is no server and no
+Tailwind / Vite / shadcn / Vercel AI Elements) talking directly to an LLM
+endpoint — OpenAI-compatible or Anthropic Messages (LM Studio first). There is no server and no
 backend — do not add one. Read `design/DESIGN.md` before implementing
 anything; it is the design source of truth.
 
@@ -150,8 +150,9 @@ Data model:
   stores: `configurations` (name records: description, artifactType,
   archived), `configurationVersions` (immutable recipes), `units`. Shapes
   are declared in `design/application-schema.yaml`. The only exceptions:
-  API keys, the LLM endpoint URL, the device theme preference, and
-  per-unit extension layout state (`variorum.ext.<extensionId>.<unitId>`)
+  per-model endpoint bindings (`variorum.model.<modelName>`: API kind,
+  endpoint URL, API key, max output tokens), the device theme preference,
+  and per-unit extension layout state (`variorum.ext.<extensionId>.<unitId>`)
   live in localStorage (device state — never in the Zustand store, never
   in an export), as does the per-model token-ratio calibration
   (`variorum.tokenRatio.<modelName>`). Export is a
@@ -224,9 +225,11 @@ LLM tool surface:
 - Lockfile discipline: commit the lockfile, install with `npm ci`,
   `ignore-scripts` in `.npmrc`, keep direct dependencies minimal, take
   updates deliberately.
-- The LLM transport goes through the OpenAI-compatible API; sampling
-  parameters (temperature, top_p, top_k) and reasoning effort come from the
-  active configuration version — never hardcode them.
+- The LLM transport speaks the protocol the model's binding names —
+  OpenAI-compatible or Anthropic Messages — resolved per request from
+  `variorum.model.<modelName>`; sampling parameters (temperature, top_p,
+  top_k) and reasoning effort come from the active configuration version —
+  never hardcode them.
 - Source layering (see DESIGN.md "Source Layout"): imports point downward
   only — components → state / llm → persistence → domain. `repository.ts`
   is the ONLY importer of `indexed-db-wrapper.ts`, and it declares
