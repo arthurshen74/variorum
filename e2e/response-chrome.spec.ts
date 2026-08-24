@@ -20,6 +20,7 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { MockLlm } from './mock-llm.ts';
+import { seedModelEndpoint } from './model-endpoint.ts';
 
 interface DevRepository {
   createConfiguration(
@@ -42,9 +43,7 @@ test.beforeEach(async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   llm = new MockLlm();
   await llm.start();
-  await page.addInitScript((url) => {
-    localStorage.setItem('variorum.baseUrl', url);
-  }, llm.url);
+  await seedModelEndpoint(page, llm.url);
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Variorum' })).toBeVisible();
 });

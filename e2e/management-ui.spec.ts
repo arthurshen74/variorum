@@ -1,14 +1,11 @@
 /**
- * Acceptance for DESIGN.md "Management UI" and the Endpoint view of
- * "API Keys & Endpoint URL" — the dialogs and sidebar controls, driven
+ * Acceptance for DESIGN.md "Management UI" — the dialogs and sidebar
+ * controls (the Models view has its own spec, model-bindings.spec.ts), driven
  * through the real UI. The window.variorum dev handle seeds data and
  * asserts database effects (the import-merge.spec.ts pattern); locators
  * define the accessibility contract the implementation must meet.
  */
 import { expect, test, type Page } from '@playwright/test';
-
-const BASE_URL_KEY = 'variorum.baseUrl';
-const DEFAULT_BASE_URL = 'http://localhost:1234/v1';
 
 interface Dump {
   configurations: {
@@ -36,7 +33,6 @@ interface DevRepository {
     configName: string,
   ): Promise<{ id: string }>;
   exportDatabase(deliver: (dump: Dump) => Promise<void>): Promise<Dump>;
-  pruneArchivedUnits(): Promise<number>;
 }
 
 type DevWindow = { variorum: { repository: DevRepository } };
@@ -296,88 +292,4 @@ test('[G2] archiving a unit asks for confirmation, removes it from the list, and
   const dump = await exportDump(page);
   expect(dump.units).toHaveLength(1);
   expect(dump.units[0]?.archived).toBe(true);
-});
-
-test('[G2] the Endpoint view shows the default URL; saving a new one persists across reload', async ({
-  page,
-}) => {
-  await openApp(page);
-  let dialog = await openConfigurations(page);
-  await dialog.getByRole('button', { name: 'Endpoint' }).click();
-  const field = dialog.getByLabel('Endpoint URL');
-  await expect(field).toHaveValue(DEFAULT_BASE_URL);
-
-  await field.fill('http://localhost:5555/v1');
-  await dialog.getByRole('button', { name: 'Save' }).click();
-  await expect
-    .poll(() => page.evaluate((k) => localStorage.getItem(k), BASE_URL_KEY))
-    .toBe('http://localhost:5555/v1');
-
-  await page.reload();
-  await expect(page.getByRole('heading', { name: 'Variorum' })).toBeVisible();
-  dialog = await openConfigurations(page);
-  await dialog.getByRole('button', { name: 'Endpoint' }).click();
-  await expect(dialog.getByLabel('Endpoint URL')).toHaveValue(
-    'http://localhost:5555/v1',
-  );
-});
-
-test('[G2] an invalid endpoint URL shows an error and stores nothing', async ({
-  page,
-}) => {
-  await openApp(page);
-  const dialog = await openConfigurations(page);
-  await dialog.getByRole('button', { name: 'Endpoint' }).click();
-  await dialog.getByLabel('Endpoint URL').fill('not a url');
-  await dialog.getByRole('button', { name: 'Save' }).click();
-
-  await expect(dialog.getByRole('alert')).toBeVisible();
-  expect(
-    await page.evaluate((k) => localStorage.getItem(k), BASE_URL_KEY),
-  ).toBeNull();
-});
-
-test('[G2] Reset to default removes the stored value and the view shows the default again', async ({
-  page,
-}) => {
-  await openApp(page);
-  const dialog = await openConfigurations(page);
-  await dialog.getByRole('button', { name: 'Endpoint' }).click();
-  const field = dialog.getByLabel('Endpoint URL');
-  await field.fill('http://localhost:5555/v1');
-  await dialog.getByRole('button', { name: 'Save' }).click();
-  await expect
-    .poll(() => page.evaluate((k) => localStorage.getItem(k), BASE_URL_KEY))
-    .toBe('http://localhost:5555/v1');
-
-  await dialog.getByRole('button', { name: 'Reset to default' }).click();
-  await expect(field).toHaveValue(DEFAULT_BASE_URL);
-  expect(
-    await page.evaluate((k) => localStorage.getItem(k), BASE_URL_KEY),
-  ).toBeNull();
-});
-
-test('[G2] changing the endpoint appears in no export and does not trip the dirty-since-export bit', async ({
-  page,
-}) => {
-  await openApp(page);
-  await seedConfiguration(page, 'linkml');
-  await exportDump(page); // clears dirty-since-export
-
-  const dialog = await openConfigurations(page);
-  await dialog.getByRole('button', { name: 'Endpoint' }).click();
-  await dialog.getByLabel('Endpoint URL').fill('http://localhost:5555/v1');
-  await dialog.getByRole('button', { name: 'Save' }).click();
-  await page.keyboard.press('Escape');
-
-  // prune requires a fresh export; it resolving proves the endpoint
-  // change was not a database mutation.
-  const result = await page.evaluate(async () => {
-    const { repository } = (window as unknown as DevWindow).variorum;
-    const pruned = await repository.pruneArchivedUnits();
-    const dump = await repository.exportDatabase(async () => {});
-    return { pruned, dump };
-  });
-  expect(result.pruned).toBe(0);
-  expect(JSON.stringify(result.dump)).not.toContain('5555');
 });

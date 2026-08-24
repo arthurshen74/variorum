@@ -6,6 +6,29 @@
  * "API Keys"; XSS caveats apply).
  */
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import type { LanguageModel } from 'ai';
+import type { ModelBinding } from './model-binding';
+
+// Anthropic's sanctioned opt-in for browser-origin requests.
+export const ANTHROPIC_BROWSER_HEADER =
+  'anthropic-dangerous-direct-browser-access';
+
+/**
+ * One language model per request, built from the binding's protocol:
+ * openai-compatible via @ai-sdk/openai-compatible (includeUsage on),
+ * anthropic-messages via @ai-sdk/anthropic (browser header on). No key
+ * in the binding means no auth header at all, on either protocol.
+ */
+export function createModel(
+  binding: ModelBinding,
+  modelName: string,
+  fetchImpl?: typeof fetch,
+): LanguageModel {
+  void binding;
+  void modelName;
+  void fetchImpl;
+  throw new Error('not implemented: createModel');
+}
 
 const BASE_URL_KEY = 'variorum.baseUrl';
 const API_KEY_KEY = 'variorum.apiKey';

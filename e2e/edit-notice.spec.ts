@@ -10,6 +10,7 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { MockLlm } from './mock-llm.ts';
+import { seedModelEndpoint } from './model-endpoint.ts';
 
 interface DumpMessage {
   role: string;
@@ -55,9 +56,7 @@ let llm: MockLlm;
 test.beforeEach(async ({ page }) => {
   llm = new MockLlm();
   await llm.start();
-  await page.addInitScript((url) => {
-    localStorage.setItem('variorum.baseUrl', url);
-  }, llm.url);
+  await seedModelEndpoint(page, llm.url);
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Variorum' })).toBeVisible();
 });

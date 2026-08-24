@@ -11,6 +11,7 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { MockLlm } from './mock-llm.ts';
+import { seedModelEndpoint } from './model-endpoint.ts';
 
 // Spelled here, not imported (e2e runs under its own tsconfig). Sources
 // of truth: TOKEN_RATIO_KEY_PREFIX and the display grammar in
@@ -36,9 +37,7 @@ let llm: MockLlm;
 test.beforeEach(async ({ page }) => {
   llm = new MockLlm();
   await llm.start();
-  await page.addInitScript((url) => {
-    localStorage.setItem('variorum.baseUrl', url);
-  }, llm.url);
+  await seedModelEndpoint(page, llm.url);
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Variorum' })).toBeVisible();
 });
