@@ -18,7 +18,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
   npx vitest run src/llm/model-binding.test.ts
   (the bare "[G1]" grep collides with other features' [G1] tests)
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-08-24)
 
 ### G2 — transport and request assembly
 - Intent: createModel builds one provider per binding protocol
