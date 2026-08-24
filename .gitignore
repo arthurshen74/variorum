@@ -24,3 +24,4 @@ variorum-*.tgz
 test-results/
 playwright-report/
 builds/
+publish/
