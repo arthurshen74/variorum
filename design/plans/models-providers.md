@@ -146,3 +146,21 @@ Approved during the G4 run (2026-08-25):
   its header comment only; no assertion changes. Why: the comment points
   at `model-bindings.spec.ts`, which G4 deletes, and the spec that
   replaces it is `models-providers.spec.ts`.
+
+Approved after G4, bug fix (2026-08-25):
+
+- A10 Locator contract of one locked test - in
+  `e2e/models-providers.spec.ts`, "[G4] the configuration form's Model
+  field offers the document's handles and still accepts free text" now
+  asserts a popover listbox (a "Show bound handles" toggle opening one
+  role=option per handle) instead of a native datalist; coverage is
+  unchanged - every bound handle is offered, selection fills the field,
+  free text still saves. Why: a native datalist filters its options
+  against the input's current value, so the Edit form (prefilled with
+  the saved handle) offered only that one handle - the spec'd combobox
+  (DESIGN.md "Management UI", Add) must offer them all. The field stays
+  a real input, so `getByLabel('Model').fill(...)` in
+  `e2e/management-ui.spec.ts` is untouched. Implementation:
+  `src/components/dialogs/ModelHandleField.tsx` and
+  `src/components/ui/popover.tsx` replace the datalist in
+  `ConfigurationsDialog.tsx`.

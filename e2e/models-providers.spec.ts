@@ -21,6 +21,10 @@
  * alert inside the dialog. Below the tree, "Referenced by
  * configurations, not bound" lists handles each with an "Add to
  * endpoint" button. The chat error row is the alert with a Retry button.
+ * The configuration form's "Model" field is a free-text input with a
+ * "Show bound handles" toggle opening a listbox (one role=option per
+ * bound handle, unfiltered on open); selecting an option fills the
+ * input (amendment A10, design/plans/models-providers.md).
  */
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { MockAnthropic } from './mock-anthropic.ts';
@@ -544,15 +548,13 @@ test("[G4] the configuration form's Model field offers the document's handles an
   await dialog.getByRole('button', { name: 'Add' }).click();
 
   const model = dialog.getByLabel('Model');
-  const listId = await model.getAttribute('list');
-  expect(listId).toBeTruthy();
-  const options = dialog.locator(`datalist#${listId ?? ''} option`);
+  await dialog.getByRole('button', { name: 'Show bound handles' }).click();
+  const options = page.getByRole('option');
   await expect(options).toHaveCount(2);
-  expect(
-    await options.evaluateAll((els) =>
-      els.map((el) => (el as HTMLOptionElement).value).sort(),
-    ),
-  ).toEqual(['llama', 'qwen-local']);
+  await expect(page.getByRole('option', { name: 'qwen-local' })).toBeVisible();
+  await expect(page.getByRole('option', { name: 'llama' })).toBeVisible();
+  await page.getByRole('option', { name: 'llama' }).click();
+  await expect(model).toHaveValue('llama');
 
   await dialog.getByLabel('Name').fill('free');
   await dialog.getByLabel('Artifact type').fill('yaml');

@@ -21,6 +21,7 @@ import { repository } from '@/persistence/repository';
 import { selectConfiguration, selectLatestVersion } from '@/state/selectors';
 import { useVariorum, variorumStore } from '@/state/store';
 import DatabaseView from './DatabaseView';
+import { ModelHandleField } from './ModelHandleField';
 import ProvidersView from './ProvidersView';
 import {
   draftEqualsVersion,
@@ -65,7 +66,6 @@ const SAMPLING_FIELDS = [
 ] as const;
 
 const FIELD_ERRORS_MESSAGE = 'Fix the highlighted fields.';
-const HANDLE_LIST_ID = 'config-model-handles';
 const UNSET_EFFORT_LABEL = 'unset';
 
 const LABEL_CLASS = 'text-xs font-medium';
@@ -370,18 +370,13 @@ export default function ConfigurationsDialog({
                 <label htmlFor="config-model" className={LABEL_CLASS}>
                   Model
                 </label>
-                <input
+                <ModelHandleField
                   id="config-model"
-                  list={HANDLE_LIST_ID}
                   className={INPUT_CLASS}
                   value={values.modelName}
-                  onChange={(event) => setField('modelName', event.target.value)}
+                  onChange={(value) => setField('modelName', value)}
+                  handles={handles}
                 />
-                <datalist id={HANDLE_LIST_ID}>
-                  {handles.map((handle) => (
-                    <option key={handle} value={handle} />
-                  ))}
-                </datalist>
                 {errors.modelName !== undefined && (
                   <span className={ERROR_CLASS}>{errors.modelName}</span>
                 )}
