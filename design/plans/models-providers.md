@@ -15,15 +15,13 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 ### G1 — Protocol adapters
 - Intent: one adapter per wire protocol behind a registry; nothing
   outside `src/llm/protocols/` names a protocol literal.
-- Write scope: `src/llm/protocols/*`. Deletes `src/llm/transport.ts`.
-  Retires `src/llm/transport.test.ts` (its wire assertions live in the
-  adapter tests).
+- Write scope: `src/llm/protocols/*` only — purely additive.
 - Tests: `src/llm/protocols/registry.test.ts`,
   `src/llm/protocols/openai-compatible.test.ts`,
   `src/llm/protocols/anthropic-messages.test.ts` — filters:
   npx vitest run -t "[G1]"
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-08-25)
 
 ### G2 — Document, mutations, migration, resolution
 - Intent: the `variorum.llm` document — validator, read/write/seed, pure
@@ -48,6 +46,8 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
   failures into error chunks before any network.
 - Write scope: `src/llm/chat-transport.ts`, `e2e/model-endpoint.ts`, and
   the amended seeding in the three files under Amendments A1–A3.
+  Deletes `src/llm/transport.ts`. Retires `src/llm/transport.test.ts`
+  (its wire assertions live in the G1 adapter tests).
 - Tests: `src/llm/chat-transport.providers.test.ts` — filters:
   npx vitest run -t "[G3]" (also matches older [G3] tags in
   `chat-transport.test.ts`; filter by file when needed)
@@ -101,3 +101,11 @@ seeding changes:
   record. Why: the transport reads `variorum.llm`, not legacy keys.
 - A4 `e2e/model-endpoint.ts` (test infra) — seeds the document; its
   seven callers are untouched.
+
+Approved during the G1 run (2026-08-25):
+
+- A5 Group scopes — `src/llm/transport.ts` and `src/llm/transport.test.ts`
+  move from G1's write scope to G3's. Why: `src/llm/chat-transport.ts` is
+  the module's only importer and belongs to G3, so deleting it in G1 breaks
+  `tsc -b` from a file G1 may not touch. G1 is additive; G3 deletes the
+  module it rewires away from, per the Order note.
