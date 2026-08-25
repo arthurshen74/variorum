@@ -1465,6 +1465,7 @@ src/
 │   └── selectors.ts             # ALL reads
 ├── llm/
 │   ├── provider-document.ts     # the variorum.llm document: shape, validator, read/write, seed
+│   ├── provider-mutations.ts    # pure add/edit/delete/reassign over the document; the uniqueness rules
 │   ├── provider-migration.ts    # one-shot fold of legacy variorum.model.* records
 │   ├── resolve-model.ts         # handle → resolved model; the two resolve-time errors
 │   ├── chat-transport.ts        # the ChatTransport: resolve, prepare via the adapter, streamText
