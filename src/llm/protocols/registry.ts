@@ -13,6 +13,9 @@ const ADAPTERS: Record<ApiProtocol, ProtocolAdapter> = {
   'anthropic-messages': anthropicMessagesAdapter,
 };
 
+/** The protocol the first-run seed endpoint speaks. */
+export const DEFAULT_ENDPOINT_PROTOCOL: ApiProtocol = 'openai-compatible';
+
 /** Every protocol id, in selector order. */
 export function apiProtocols(): readonly ApiProtocol[] {
   return Object.keys(ADAPTERS) as ApiProtocol[];

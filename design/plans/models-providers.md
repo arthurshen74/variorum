@@ -29,16 +29,15 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
   request-time errors.
 - Write scope: `src/llm/provider-document.ts`,
   `src/llm/provider-mutations.ts`, `src/llm/provider-migration.ts`,
-  `src/llm/resolve-model.ts`. Deletes `src/llm/model-binding.ts`.
-  Retires `src/llm/model-binding.test.ts` (URL/key helper cases carried
-  into `provider-document.test.ts`).
+  `src/llm/resolve-model.ts`, plus one additive export in
+  `src/llm/protocols/registry.ts` (amendments A6, A7). Purely additive.
 - Tests: `src/llm/provider-document.test.ts`,
   `src/llm/provider-mutations.test.ts`,
   `src/llm/provider-migration.test.ts`, `src/llm/resolve-model.test.ts`
   — filters: npx vitest run -t "[G2]" (also matches older [G2] tags in
   `chat-transport.anthropic.test.ts`; filter by file when needed)
 - Depends on: G1 (registry for the validator)
-- Status: RED
+- Status: GREEN (2026-08-25)
 
 ### G3 — Transport wiring
 - Intent: the chat transport resolves the handle through the document at
@@ -63,9 +62,10 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
   `src/components/dialogs/provider-form.ts`,
   `src/components/dialogs/ConfigurationsDialog.tsx`. Deletes
   `src/components/dialogs/ModelsView.tsx`,
-  `src/components/dialogs/model-binding-form.ts`. Retires
-  `src/components/dialogs/model-binding-form.test.ts` and
-  `e2e/model-bindings.spec.ts`.
+  `src/components/dialogs/model-binding-form.ts`, and
+  `src/llm/model-binding.ts` (amendment A6). Retires
+  `src/components/dialogs/model-binding-form.test.ts`,
+  `src/llm/model-binding.test.ts`, and `e2e/model-bindings.spec.ts`.
 - Tests: `src/components/dialogs/provider-form.test.ts`,
   `e2e/models-providers.spec.ts` — filters: npx vitest run -t "[G4]" /
   npx playwright test --grep "\[G4\]" (the grep also matches older [G4]
@@ -109,3 +109,21 @@ Approved during the G1 run (2026-08-25):
   the module's only importer and belongs to G3, so deleting it in G1 breaks
   `tsc -b` from a file G1 may not touch. G1 is additive; G3 deletes the
   module it rewires away from, per the Order note.
+
+Approved during the G2 run (2026-08-25):
+
+- A6 Group scopes and one retired test file - deleting
+  `src/llm/model-binding.ts` and retiring `src/llm/model-binding.test.ts`
+  move from G2 to G4. Why: `src/llm/chat-transport.ts` and
+  `src/llm/transport.ts` (G3) and `src/components/dialogs/ModelsView.tsx`
+  and `model-binding-form.ts` (G4) still import the module, so deleting it
+  in G2 breaks `tsc -b` from four files G2 may not touch. G4 removes the
+  last importer. Same reasoning as A5; G2 is purely additive.
+  `parseEndpointUrl` and `normalizeApiKey` therefore exist in both
+  `provider-document.ts` and `model-binding.ts` until G4.
+- A7 Group scope - `src/llm/protocols/registry.ts` joins G2's write scope
+  for one additive export, `DEFAULT_ENDPOINT_PROTOCOL`. Why: `seedDocument`
+  must name the seed endpoint's protocol, and no file outside
+  `src/llm/protocols/` may name a protocol literal (CLAUDE.md,
+  `adding-an-api-surface.md` "The fences"). Adding a protocol still touches
+  only `protocols/`.

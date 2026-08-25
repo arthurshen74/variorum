@@ -33,7 +33,29 @@ export function resolveModel(
   document: ProviderDocument,
   handle: string,
 ): ResolvedModel {
-  void document;
-  void handle;
-  throw new Error('not implemented: resolveModel');
+  for (const endpoint of document.endpoints) {
+    const model = endpoint.models.find(
+      (candidate) => candidate.handle === handle,
+    );
+    if (model === undefined) continue;
+
+    // A key stored under an earlier authRequired=true is ignored, not sent.
+    const apiKey = endpoint.authRequired
+      ? (model.apiKey ?? endpoint.apiKey)
+      : undefined;
+    if (endpoint.authRequired && apiKey === undefined) {
+      throw new MissingApiKeyError(handle, endpoint.url);
+    }
+
+    return {
+      api: endpoint.api,
+      url: endpoint.url,
+      modelId: model.modelName,
+      ...(apiKey !== undefined ? { apiKey } : {}),
+      ...(model.maxOutputTokens !== undefined
+        ? { maxOutputTokens: model.maxOutputTokens }
+        : {}),
+    };
+  }
+  throw new UnboundModelError(handle);
 }
