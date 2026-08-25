@@ -19,16 +19,33 @@ import {
   VariorumChatTransport,
   finishUsageMetadata,
 } from './chat-transport';
+import { PROVIDER_DOCUMENT_KEY } from './provider-document';
+import { installLocalStorageStub } from './local-storage-stub';
 import { variorumStore } from '@/state/store';
 import type { ConfigurationVersion } from '@/domain/types';
 
-// node has no localStorage; the transport reads the base URL through it.
-const storage = new Map<string, string>();
-(globalThis as Record<string, unknown>).localStorage = {
-  getItem: (key: string) => storage.get(key) ?? null,
-  setItem: (key: string, value: string) => void storage.set(key, value),
-  removeItem: (key: string) => void storage.delete(key),
-};
+const storage = installLocalStorageStub();
+
+/** The handles this file's versions name, all at the one LM Studio endpoint. */
+function seedDocument(): void {
+  storage.set(
+    PROVIDER_DOCUMENT_KEY,
+    JSON.stringify({
+      endpoints: [
+        {
+          id: 'ep-local',
+          url: 'http://localhost:1234/v1',
+          api: 'openai-compatible',
+          authRequired: false,
+          models: ['test-model', 'better-model'].map((modelName) => ({
+            modelName,
+            handle: modelName,
+          })),
+        },
+      ],
+    }),
+  );
+}
 
 const VERSION_ONE: ConfigurationVersion = {
   name: 'linkml',
@@ -154,6 +171,7 @@ const USAGE_49: WireUsage = {
 describe('[G2] VariorumChatTransport — usage plumbing', () => {
   beforeEach(() => {
     storage.clear();
+    seedDocument();
     seedStore([VERSION_ONE]);
   });
 

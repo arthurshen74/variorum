@@ -1,7 +1,7 @@
 /**
- * Seeds the model binding that points a spec's app at its scripted
- * endpoint (DESIGN.md "Model Bindings") — device state, so seeded
- * directly rather than driven through the Models view every time.
+ * Seeds the Models/Providers document that points a spec's app at its
+ * scripted endpoint (DESIGN.md "Models and Providers") — device state, so
+ * seeded directly rather than driven through the tree every time.
  */
 import type { Page } from '@playwright/test';
 
@@ -15,8 +15,18 @@ export async function seedModelEndpoint(
   await page.addInitScript(
     ({ url, modelName }) => {
       localStorage.setItem(
-        `variorum.model.${modelName}`,
-        JSON.stringify({ api: 'openai-compatible', endpointUrl: url }),
+        'variorum.llm',
+        JSON.stringify({
+          endpoints: [
+            {
+              id: 'ep-scripted',
+              url,
+              api: 'openai-compatible',
+              authRequired: false,
+              models: [{ modelName, handle: modelName }],
+            },
+          ],
+        }),
       );
     },
     { url, modelName },

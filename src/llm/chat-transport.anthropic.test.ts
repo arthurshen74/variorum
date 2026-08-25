@@ -12,17 +12,12 @@ import {
   TRUNCATED_RESPONSE_MESSAGE,
   VariorumChatTransport,
 } from './chat-transport';
-import type { ModelBinding } from './model-binding';
+import { PROVIDER_DOCUMENT_KEY } from './provider-document';
+import { installLocalStorageStub } from './local-storage-stub';
 import { variorumStore } from '@/state/store';
 import type { ConfigurationVersion } from '@/domain/types';
 
-// node has no localStorage; bindings are read through it.
-const storage = new Map<string, string>();
-(globalThis as Record<string, unknown>).localStorage = {
-  getItem: (key: string) => storage.get(key) ?? null,
-  setItem: (key: string, value: string) => void storage.set(key, value),
-  removeItem: (key: string) => void storage.delete(key),
-};
+const storage = installLocalStorageStub();
 
 const FULL_VERSION: ConfigurationVersion = {
   name: 'linkml',
@@ -61,14 +56,23 @@ function seedStore(version: ConfigurationVersion): void {
   });
 }
 
-const BINDING: ModelBinding = {
-  api: 'anthropic-messages',
-  endpointUrl: 'http://anthropic.local/v1',
-  apiKey: 'sk-ant-test',
-};
-
+/** One auth-required Messages endpoint serving the model under handle = modelName. */
 function seedBinding(modelName = 'local-mock'): void {
-  storage.set(`variorum.model.${modelName}`, JSON.stringify(BINDING));
+  storage.set(
+    PROVIDER_DOCUMENT_KEY,
+    JSON.stringify({
+      endpoints: [
+        {
+          id: 'ep-anthropic',
+          url: 'http://anthropic.local/v1',
+          api: 'anthropic-messages',
+          authRequired: true,
+          apiKey: 'sk-ant-test',
+          models: [{ modelName, handle: modelName }],
+        },
+      ],
+    }),
+  );
 }
 
 /** The provider gates sampling by model id; each G4 case binds its own. */

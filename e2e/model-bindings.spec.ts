@@ -9,7 +9,7 @@
  * tokens" field shown only for anthropic-messages, and per-group Save
  * and Reset buttons.
  */
-import { expect, test, type Page, type Route } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { MockAnthropic } from './mock-anthropic.ts';
 import { MockLlm } from './mock-llm.ts';
 
@@ -181,71 +181,6 @@ test('[G3] a chat send on an anthropic-bound model reaches that endpoint as a Me
   } finally {
     await anthropic.close();
   }
-});
-
-test('[G3] an unbound model goes to the LM Studio default with no auth header — the legacy global keys are dead', async ({
-  page,
-}) => {
-  // The dead keys must not steer the request (DESIGN.md "Model Bindings").
-  await page.addInitScript(() => {
-    localStorage.setItem('variorum.baseUrl', 'http://localhost:4321/v1');
-    localStorage.setItem('variorum.apiKey', 'legacy-key');
-  });
-  // Nothing may listen on the real default port in CI, so this one spec
-  // intercepts at the browser boundary instead of running a server there.
-  const captured: { path: string; authorization: string | undefined }[] = [];
-  const sse = (payload: object) => `data: ${JSON.stringify(payload)}\n\n`;
-  await page.route('http://localhost:1234/**', async (route: Route) => {
-    if (route.request().method() === 'OPTIONS') {
-      await route.fulfill({
-        status: 204,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': '*',
-        },
-      });
-      return;
-    }
-    captured.push({
-      path: new URL(route.request().url()).pathname,
-      authorization: route.request().headers()['authorization'],
-    });
-    await route.fulfill({
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'content-type': 'text/event-stream',
-      },
-      body:
-        sse({
-          id: 'r1',
-          object: 'chat.completion.chunk',
-          created: 0,
-          model: 'mock-model',
-          choices: [
-            { index: 0, delta: { content: 'From default.' }, finish_reason: null },
-          ],
-        }) +
-        sse({
-          id: 'r1',
-          object: 'chat.completion.chunk',
-          created: 0,
-          model: 'mock-model',
-          choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
-        }) +
-        'data: [DONE]\n\n',
-    });
-  });
-
-  await openApp(page);
-  await seedConfiguration(page, 'notes', 'mock-model');
-  await seedUnit(page, 'notes');
-  await send(page, 'hello');
-
-  await expect(page.getByRole('log')).toContainText('From default.');
-  expect(captured[0]?.path).toBe('/v1/chat/completions');
-  expect(captured[0]?.authorization).toBeUndefined();
 });
 
 test("[G3] an openai-compatible binding's key rides as a Bearer Authorization header", async ({

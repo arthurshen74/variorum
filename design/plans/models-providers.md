@@ -51,7 +51,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
   npx vitest run -t "[G3]" (also matches older [G3] tags in
   `chat-transport.test.ts`; filter by file when needed)
 - Depends on: G1, G2
-- Status: RED
+- Status: GREEN (2026-08-25)
 
 ### G4 — Dialog and tree
 - Intent: the Models/Providers tree view, the endpoint and model forms,
@@ -127,3 +127,14 @@ Approved during the G2 run (2026-08-25):
   `src/llm/protocols/` may name a protocol literal (CLAUDE.md,
   `adding-an-api-surface.md` "The fences"). Adding a protocol still touches
   only `protocols/`.
+
+Approved during the G3 run (2026-08-25):
+
+- A8 One retired test - `e2e/model-bindings.spec.ts`'s "an unbound model
+  goes to the LM Studio default with no auth header" is deleted by G3
+  rather than retired with its file by G4. Why: G3 is the change that
+  removes the silent default, so that test contradicts the approved spec
+  (DESIGN.md "Resolution": there is no silent default) the moment the
+  transport reads the document. The file's other tests stay for G4 - the
+  two that send seed legacy `variorum.model.*` records, which the
+  first read folds into the document.

@@ -1,13 +1,15 @@
 /**
  * The custom ChatTransport (DESIGN.md "Chat"): calls streamText in the
- * browser against the endpoint the model is bound to — no server route.
- * The request is built from the LATEST SAVED version of the unit's
- * configuration at call time (model id, system prompt, sampling
- * parameters, reasoning effort) and from the model's binding, resolved at
- * the same moment (DESIGN.md "Model Bindings"). Reasoning parts are
- * stripped from the request context (never re-sent). This class is the
- * designated seam: the single file that would change if requests ever
- * routed through a proxy.
+ * browser against the endpoint the configuration's model handle resolves
+ * to — no server route. The request is built from the LATEST SAVED
+ * version of the unit's configuration at call time (handle, system
+ * prompt, sampling parameters, reasoning effort) and from the
+ * Models/Providers document, read at the same moment (DESIGN.md "Models
+ * and Providers"); the protocol adapter the resolved endpoint names
+ * turns the two into the request. Reasoning parts are stripped from the
+ * request context (never re-sent). This class is the designated seam:
+ * the single file that would change if requests ever routed through a
+ * proxy.
  */
 import { streamText, toUIMessageStream } from 'ai';
 import type {
@@ -22,42 +24,35 @@ import { selectLatestVersion, selectUnit } from '@/state/selectors';
 import type { ConfigurationVersion } from '@/domain/types';
 import { toModelMessages } from './mapping';
 import type { UsageMetadata } from './token-usage';
-import { DEFAULT_MAX_OUTPUT_TOKENS, getModelBinding } from './model-binding';
-import { createModel } from './transport';
-
-// Recipe fields the OpenAI-compatible provider drops, spliced back into
-// the body below.
-const BODY_TOP_K = 'top_k';
-const BODY_REASONING_EFFORT = 'reasoning_effort';
+import type { PreparedRequest } from './protocols/adapter';
+import { protocolAdapter } from './protocols/registry';
+import { readProviderDocument } from './provider-document';
+import { resolveModel } from './resolve-model';
 
 /**
- * The OpenAI-compatible provider reports topK as unsupported, and reaches
- * reasoning effort only through a provider-name-keyed option.
+ * Handle to request, entirely at call time: a document edit between sends
+ * changes the next request's endpoint, protocol and key.
  */
-function openAiExtraBodyFields(
+function prepareRequest(
   version: ConfigurationVersion,
-): Record<string, unknown> {
-  return {
-    ...(version.topK !== undefined ? { [BODY_TOP_K]: version.topK } : {}),
-    ...(version.reasoningEffort !== undefined
-      ? { [BODY_REASONING_EFFORT]: version.reasoningEffort }
-      : {}),
-  };
+  fetchImpl: typeof fetch,
+): PreparedRequest {
+  const resolved = resolveModel(readProviderDocument(), version.modelName);
+  return protocolAdapter(resolved.api).prepareRequest(
+    resolved,
+    version,
+    fetchImpl,
+  );
 }
 
-/** Wraps fetch to merge extra fields into the JSON request body. */
-function withExtraBodyFields(
-  base: typeof fetch,
-  extra: Record<string, unknown>,
-): typeof fetch {
-  if (Object.keys(extra).length === 0) return base;
-  return async (input, init) => {
-    const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
-    return base(input, {
-      ...init,
-      body: JSON.stringify({ ...body, ...extra }),
-    });
-  };
+/** A one-chunk stream carrying a failure that never reached the network. */
+function errorChunkStream(errorText: string): ReadableStream<UIMessageChunk> {
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue({ type: 'error', errorText });
+      controller.close();
+    },
+  });
 }
 
 // The OpenAI-compatible finish reason for a response the server cut short.
@@ -141,30 +136,31 @@ export class VariorumChatTransport implements ChatTransport<UIMessage> {
     options: Parameters<ChatTransport<UIMessage>['sendMessages']>[0],
   ): Promise<ReadableStream<UIMessageChunk>> {
     const version = this.latestVersion();
-    const binding = getModelBinding(version.modelName);
-    const messagesWire = binding.api === 'anthropic-messages';
-    const baseFetch = this.deps.fetchImpl ?? globalThis.fetch;
-    const fetchImpl = messagesWire
-      ? baseFetch
-      : withExtraBodyFields(baseFetch, openAiExtraBodyFields(version));
+    const fetchImpl = this.deps.fetchImpl ?? globalThis.fetch;
+
+    let prepared: PreparedRequest;
+    try {
+      prepared = prepareRequest(version, fetchImpl);
+    } catch (error) {
+      // A malformed document or a handle that does not resolve is the same
+      // error row as a failed request, so fixing the tree and pressing
+      // Retry is the whole recovery (DESIGN.md "Chat", Errors).
+      return Promise.resolve(
+        errorChunkStream(
+          error instanceof Error ? error.message : String(error),
+        ),
+      );
+    }
 
     const result = streamText({
-      model: createModel(binding, version.modelName, fetchImpl),
+      model: prepared.model,
       system: version.systemPrompt,
       messages: toModelMessages(options.messages),
       temperature: version.temperature,
       topP: version.topP,
-      // The Messages API makes max_tokens mandatory, and gates sampling by
-      // model id inside the provider — topK goes through it rather than the
-      // splice so that gate can see it. The OpenAI-compatible wire sends no
-      // output cap at all.
-      ...(messagesWire
-        ? {
-            maxOutputTokens:
-              binding.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
-            topK: version.topK,
-          }
-        : {}),
+      // The output cap and topK routing are the adapter's, not the recipe's:
+      // what each wire makes mandatory or gates by model id.
+      ...prepared.options,
       abortSignal: options.abortSignal,
       // A failed request is a boundary the user resolves with Retry, not
       // something the SDK re-attempts behind their back — silent retries
