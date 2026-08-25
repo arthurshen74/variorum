@@ -1,7 +1,8 @@
 /**
  * The Configurations dialog (DESIGN.md "Management UI"): five views —
- * List, Add, Edit, Models, Database. Draft state is component state here
- * and dies with the dialog; every mutation goes through the repository.
+ * List, Add, Edit, Models/Providers, Database. Draft state is component
+ * state here and dies with the dialog; every mutation goes through the
+ * repository.
  */
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -15,11 +16,12 @@ import {
 } from '@/components/ui/dialog';
 import { Slider } from '@/components/ui/slider';
 import type { Configuration } from '@/domain/types';
+import { readProviderDocument } from '@/llm/provider-document';
 import { repository } from '@/persistence/repository';
 import { selectConfiguration, selectLatestVersion } from '@/state/selectors';
 import { useVariorum, variorumStore } from '@/state/store';
 import DatabaseView from './DatabaseView';
-import ModelsView from './ModelsView';
+import ProvidersView from './ProvidersView';
 import {
   draftEqualsVersion,
   formValuesFromVersion,
@@ -39,7 +41,7 @@ type View =
   | { kind: 'list' }
   | { kind: 'add' }
   | { kind: 'edit'; name: string }
-  | { kind: 'models' }
+  | { kind: 'providers' }
   | { kind: 'database' };
 
 type FieldErrors = Partial<Record<keyof ConfigurationFormValues, string>>;
@@ -63,6 +65,7 @@ const SAMPLING_FIELDS = [
 ] as const;
 
 const FIELD_ERRORS_MESSAGE = 'Fix the highlighted fields.';
+const HANDLE_LIST_ID = 'config-model-handles';
 const UNSET_EFFORT_LABEL = 'unset';
 
 const LABEL_CLASS = 'text-xs font-medium';
@@ -72,6 +75,21 @@ const ERROR_CLASS = 'text-xs text-destructive';
 const ALERT_CLASS =
   'rounded-md border border-destructive/50 bg-destructive/10 px-2 py-1 text-xs text-destructive';
 const ROW_CLASS = 'flex items-center gap-2 rounded-md border px-2 py-1.5';
+
+/**
+ * The handles the Model field offers. A malformed document costs the
+ * suggestions, not the form: the field takes free text either way, and
+ * the Models/Providers view is where that parse error belongs.
+ */
+function boundHandles(): string[] {
+  try {
+    return readProviderDocument().endpoints.flatMap((endpoint) =>
+      endpoint.models.map((model) => model.handle),
+    );
+  } catch {
+    return [];
+  }
+}
 
 export default function ConfigurationsDialog({
   open,
@@ -83,6 +101,7 @@ export default function ConfigurationsDialog({
   const [values, setValues] = useState<ConfigurationFormValues>(BLANK_FORM);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [alert, setAlert] = useState<string | null>(null);
+  const [handles, setHandles] = useState<string[]>([]);
 
   const active = configurations.filter((c) => !c.archived);
   const archived = configurations.filter((c) => c.archived);
@@ -96,6 +115,7 @@ export default function ConfigurationsDialog({
   }
 
   function showAdd() {
+    setHandles(boundHandles());
     setValues(BLANK_FORM);
     setErrors({});
     setAlert(null);
@@ -103,6 +123,7 @@ export default function ConfigurationsDialog({
   }
 
   function showEdit(configuration: Configuration) {
+    setHandles(boundHandles());
     const version = selectLatestVersion(configuration.name)(
       variorumStore.getState(),
     );
@@ -186,14 +207,14 @@ export default function ConfigurationsDialog({
             </DialogHeader>
             <div className="flex gap-2">
               <Button size="sm" onClick={showAdd}>
-                New configuration
+                Add new configuration
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setView({ kind: 'models' })}
+                onClick={() => setView({ kind: 'providers' })}
               >
-                Models
+                Models/Providers
               </Button>
               <Button
                 size="sm"
@@ -351,10 +372,16 @@ export default function ConfigurationsDialog({
                 </label>
                 <input
                   id="config-model"
+                  list={HANDLE_LIST_ID}
                   className={INPUT_CLASS}
                   value={values.modelName}
                   onChange={(event) => setField('modelName', event.target.value)}
                 />
+                <datalist id={HANDLE_LIST_ID}>
+                  {handles.map((handle) => (
+                    <option key={handle} value={handle} />
+                  ))}
+                </datalist>
                 {errors.modelName !== undefined && (
                   <span className={ERROR_CLASS}>{errors.modelName}</span>
                 )}
@@ -435,7 +462,7 @@ export default function ConfigurationsDialog({
           <DatabaseView onReplaced={onReplaced} onBack={showList} />
         )}
 
-        {view.kind === 'models' && <ModelsView onBack={showList} />}
+        {view.kind === 'providers' && <ProvidersView onBack={showList} />}
       </DialogContent>
     </Dialog>
   );

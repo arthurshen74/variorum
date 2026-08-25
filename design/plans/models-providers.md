@@ -57,7 +57,8 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
 - Intent: the Models/Providers tree view, the endpoint and model forms,
   the hint list and key-gap flag, and the configuration form's handle
   combobox.
-- Write scope: `src/components/dialogs/ProvidersView.tsx` (plus
+- Write scope: `e2e/management-ui.spec.ts` (header comment only,
+  amendment A9), `src/components/dialogs/ProvidersView.tsx` (plus
   `EndpointForm.tsx` / `ModelForm.tsx` if it splits),
   `src/components/dialogs/provider-form.ts`,
   `src/components/dialogs/ConfigurationsDialog.tsx`. Deletes
@@ -71,7 +72,7 @@ Full gate: npm run typecheck && npx vitest run && npx playwright test
   npx playwright test --grep "\[G4\]" (the grep also matches older [G4]
   tags in `chat.spec.ts`; run `e2e/models-providers.spec.ts` by file)
 - Depends on: G2 (unit part); G1, G2, G3 (acceptance)
-- Status: RED
+- Status: GREEN (2026-08-25)
 
 ## Order
 
@@ -138,3 +139,10 @@ Approved during the G3 run (2026-08-25):
   transport reads the document. The file's other tests stay for G4 - the
   two that send seed legacy `variorum.model.*` records, which the
   first read folds into the document.
+
+Approved during the G4 run (2026-08-25):
+
+- A9 Group scope - `e2e/management-ui.spec.ts` joins G4's write scope for
+  its header comment only; no assertion changes. Why: the comment points
+  at `model-bindings.spec.ts`, which G4 deletes, and the spec that
+  replaces it is `models-providers.spec.ts`.

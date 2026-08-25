@@ -1,9 +1,10 @@
 /**
  * Acceptance for DESIGN.md "Management UI" — the dialogs and sidebar
- * controls (the Models view has its own spec, model-bindings.spec.ts), driven
- * through the real UI. The window.variorum dev handle seeds data and
- * asserts database effects (the import-merge.spec.ts pattern); locators
- * define the accessibility contract the implementation must meet.
+ * controls (the Models/Providers view has its own spec,
+ * models-providers.spec.ts), driven through the real UI. The
+ * window.variorum dev handle seeds data and asserts database effects (the
+ * import-merge.spec.ts pattern); locators define the accessibility
+ * contract the implementation must meet.
  */
 import { expect, test, type Page } from '@playwright/test';
 
