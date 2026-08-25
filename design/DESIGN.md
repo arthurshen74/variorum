@@ -1558,6 +1558,17 @@ lose a draft, because the draft never belonged to a tab. If an LLM
 response lands a new revision while the working copy is dirty, the pane
 prompts the human to pick — keep-both thinking, in miniature.
 
+The header also holds **Copy**, beside History and Save: it writes the
+working buffer to the clipboard verbatim — copy what you are looking
+at, dirty edits and viewed revisions included, never the latest saved
+revision behind them. Host-owned for the same reason Save is: the
+buffer is the canonical string, so every extension gets copying for
+free, and a graph tab copies its YAML. Feedback is the button label
+itself, transiently "Copied" or "Copy failed" — no toast machinery.
+The async clipboard API is called inline in the pane; it is not part
+of the file-io fence, which widens only if a second clipboard consumer
+appears.
+
 **Extension device state.** An extension may persist layout-class state in
 localStorage under `variorum.ext.<extensionId>.<unitId>` — the same seam
 as the API key, endpoint URL, and theme, with the same structural

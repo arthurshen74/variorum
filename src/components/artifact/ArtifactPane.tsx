@@ -13,7 +13,7 @@
  * that same buffer — no second buffer, no read-only mode — behind a
  * confirmation when it would destroy unsaved edits.
  */
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -66,6 +66,19 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
   const [collision, setCollision] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pendingView, setPendingView] = useState<Artifact | null>(null);
+  const [copyLabel, setCopyLabel] = useState('Copy');
+  const copyResetRef = useRef<number | undefined>(undefined);
+
+  async function copyWorking() {
+    try {
+      await navigator.clipboard.writeText(buffer.working);
+      setCopyLabel('Copied');
+    } catch {
+      setCopyLabel('Copy failed');
+    }
+    window.clearTimeout(copyResetRef.current);
+    copyResetRef.current = window.setTimeout(() => setCopyLabel('Copy'), 1500);
+  }
 
   function seatView(artifact: Artifact) {
     setBuffer({
@@ -139,6 +152,13 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
           {chip !== null ? (
             <span className="text-xs text-muted-foreground">{chip}</span>
           ) : null}
+          <button
+            type="button"
+            onClick={() => void copyWorking()}
+            className="rounded-md border px-2 py-1 text-xs font-medium hover:bg-accent"
+          >
+            {copyLabel}
+          </button>
           <button
             type="button"
             onClick={() => setHistoryOpen(true)}
