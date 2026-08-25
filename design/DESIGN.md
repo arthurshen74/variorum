@@ -17,11 +17,36 @@ chat-completions API (LM Studio first) and the Anthropic Messages API
 (api.anthropic.com, or LM Studio's Anthropic-compatible surface). Which
 protocol a request speaks — and which server it reaches — is a property
 of the MODEL the active configuration version names, resolved through
-that model's binding at request time (see "Model Bindings"). The
-transport keeps one provider per protocol: `@ai-sdk/openai-compatible`
-as before, and `@ai-sdk/anthropic` (dependency human-approved) for
-Messages — both plug into the same `streamText` path, so the chat
-pipeline above the provider does not fork.
+the Models/Providers document at request time (see "Models and
+Providers"). The transport keeps one provider per protocol:
+`@ai-sdk/openai-compatible` as before, and `@ai-sdk/anthropic`
+(dependency human-approved) for Messages — both plug into the same
+`streamText` path, so the chat pipeline above the provider does not
+fork.
+
+**Protocol adapters.** Everything protocol-specific lives in one
+adapter per protocol under `src/llm/protocols/`, reached through a
+registry keyed by the protocol id; nothing outside that directory
+names a protocol literal. An adapter is exactly the differences the
+two protocols have already shown: a display label, whether a model
+under it carries an output cap (`usesMaxOutputTokens`), and
+`prepareRequest(resolved, version, fetch)` — the provider-built
+`LanguageModel` plus the `streamText` options and fetch wrapping that
+protocol needs (the OpenAI-compatible body splice for `top_k` and
+`reasoning_effort`; the Messages cap and `topK` routing). The chat
+transport asks the registry; the Models/Providers form asks the
+adapter which fields to show; the document validator takes the set of
+protocol ids from the registry. Adding a surface is one adapter file,
+one registry line, one scripted-endpoint test file, and one dependency
+approval — the steps are in
+[adding-an-api-surface.md](adding-an-api-surface.md). The interface
+was extracted on two instances, earlier than the DRY rule's fourth,
+because the duplication had already crossed the `llm` → `components`
+boundary (the protocol list and the Messages literal each lived
+twice); it carries no hook the two adapters don't use. Vendors (LM
+Studio, Together, Groq) are not protocols and never become adapter
+ids: an endpoint names a URL and a protocol, and a vendor is at most
+a preset that fills those two fields.
 
 Beware of CORS! The idea is that we are using local models so we can
 control directly the CORS setup. Anthropic's hosted API is the
@@ -35,9 +60,9 @@ Three protocol asymmetries, settled here:
 
 - **The Messages API requires an explicit output cap** — `max_tokens`
   is mandatory on that wire — which collides with "no output cap"
-  under "Truncation discards, too". The binding carries it: an
-  `anthropic-messages` binding has a `maxOutputTokens` field, default
-  32000, sent only on that protocol. A `length` finish remains a
+  under "Truncation discards, too". The model row carries it: a model
+  under an `anthropic-messages` endpoint has a `maxOutputTokens` field,
+  default 32000, sent only on that protocol. A `length` finish remains a
   FAILED request; nothing else about truncation changes. The
   OpenAI-compatible path still sends no cap.
 - **Sampling parameters are model-gated on the Messages wire.** Which
@@ -65,43 +90,135 @@ Three protocol asymmetries, settled here:
   is deferred until a real model needs it. Reasoning CONTENT streaming
   back is captured on both protocols, unchanged.
 
-## Model Bindings
+## Models and Providers
 
-Where a request goes is bound to the MODEL NAME, not to the app: a
-model binding is device state in localStorage under
-`variorum.model.<modelName>` — a JSON record
-`{ api, endpointUrl, apiKey?, maxOutputTokens? }`, where `api` is
-`openai-compatible` or `anthropic-messages`. The configuration version
-names the model (immutable recipe); the binding says how THIS MACHINE
-reaches that model. Same seam as the theme and the token-ratio
-calibration, and the placement is structural for the same reasons:
-device state can never appear in an export and never trips the
-dirty-since-export bit (see "Theming").
+Where a request goes is bound to the MODEL the configuration names,
+not to the app — and how this machine reaches that model is device
+state: a single JSON document in localStorage under `variorum.llm`.
+The configuration version names the model (immutable recipe); the
+document says where THIS MACHINE finds it. Same seam as the theme and
+the token-ratio calibration, and the placement is structural for the
+same reasons: device state can never appear in an export and never
+trips the dirty-since-export bit (see "Theming").
 
-An IndexedDB `models` collection was considered and rejected: bindings
-are machine facts — localhost ports, with API keys riding beside them —
+The document is a tree of endpoints, each holding the models it serves:
+
+```
+{ endpoints: [ { id, url, api, authRequired, apiKey?,
+                 models: [ { modelName, handle, apiKey?, maxOutputTokens? } ] } ] }
+```
+
+**Endpoints.** `id` is generated at creation and never shown: it is
+what lets the URL be edited (LM Studio moved ports) without re-homing
+every model beneath it. `url` is the base URL, protocol and port
+included, a parseable http(s) URL kept as typed (no normalization —
+see "parseEndpointUrl"). `api` is the wire protocol the endpoint
+speaks — a protocol adapter id (see "LLM Provider Interface"). Two
+endpoints may share a URL as long as their protocols differ: LM Studio
+serves both surfaces on one port. The pair (url, api) is unique across
+the document, compared as stored.
+
+**Models.** `modelName` is the id that goes on the wire; it is unique
+within its endpoint. `handle` is the name configurations use, and it
+is unique across the WHOLE document — a configuration version's
+`modelName` field is portable (exported, immutable) and cannot carry a
+device-local endpoint id, so a bare string must resolve to exactly one
+row. Handles are what make the same wire model reachable from two
+endpoints: `qwen/qwen3.6-35b-a3b` on the workstation and the same id
+on a hosted endpoint under a second handle. The handle defaults to the
+model name, so the common case never types it twice. Pointing a
+configuration at the other endpoint is either a new version naming the
+other handle (a recipe change, versioned like any other) or reassigning
+the model row to the other endpoint in the tree (a device change; the
+configuration is untouched). The version record's field keeps its
+schema name `modelName`; its VALUE is a handle (see "Configurations").
+
+**Resolution** happens in the transport at call time — a tree edit
+between sends changes the next request — and turns a handle into
+`{ api, url, apiKey?, maxOutputTokens?, modelId }`, the shape the
+protocol adapters consume. A handle no row carries fails the request
+before any network is touched, with the message `no endpoint bound for
+model <handle>, please check your models/providers configuration`,
+delivered as the chat's error row so Retry works once the tree is
+fixed (see "Chat"). There is no silent default: the earlier "unbound
+model goes to LM Studio" fallback sent prompts to a host the user
+never named, and a missing row is exactly the state the error should
+name.
+
+**Keys.** `authRequired` on the endpoint says whether the endpoint
+wants one. When true, a key must resolve — the model's own key wins,
+then the endpoint's — and a request with neither fails before the
+network with `no API key for model <handle>: endpoint <url> requires
+authentication, please check your models/providers configuration`.
+When false, no auth header is sent and no key field is offered; a key
+left in the document from an earlier `true` is ignored, not sent.
+Enforcement lives at resolve time ONLY: a form-time rule would have to
+forbid clearing an endpoint key while a model depends on it, so the
+tree flags the gap instead (see "Management UI"). The header name is
+the adapter's business (`Authorization: Bearer` on OpenAI-compatible,
+`x-api-key` on Messages). LM Studio needs none on either surface, and
+an endpoint that does require one and is marked `false` answers with
+its own auth error — still the honest signal for that mistake. A
+saved key is trimmed; an empty or whitespace-only key field means no
+key.
+
+`maxOutputTokens` rides on the model, offered only when the endpoint's
+adapter declares the cap (Messages makes it mandatory on the wire —
+see the asymmetries under "LLM Provider Interface"); absent means the
+adapter's default. It is a per-model fact — caps differ by model — so
+it does not live on the endpoint.
+
+**Deleting and moving.** An endpoint with models beneath it cannot be
+deleted — the tree refuses, no cascade; move or delete the models
+first. A model may be deleted even when a configuration names its
+handle: the configuration is immutable and simply becomes unbound, and
+the resolve-time error names it. Reassigning a model to another
+endpoint keeps its handle and everything else on the row, and refuses
+when the target already serves that `modelName`.
+
+**Shape decisions.** Nested, not two flat arrays joined by a foreign
+key: every model has an endpoint by construction, "refuse to delete an
+endpoint with models" is a length check, and per-endpoint uniqueness
+is a within-array check — the constraints are structural rather than
+validated. The document is tens of rows; indexing is not a concern.
+One document, not one localStorage key per record: the tree reads and
+validates the whole thing in one parse, and enumerating records by key
+prefix was the awkward part of the previous design. An IndexedDB
+`models` collection was considered and rejected then and stays
+rejected: these are machine facts with API keys riding beside them,
 and a fourth object store would drag the dump envelope, the
 hand-written validator, and the merge along for data that does not
 belong in a backup. The exactly-three-stores invariant stands.
 
-When no binding is stored for a model, the default applies:
-`openai-compatible` at `http://localhost:1234/v1` (LM Studio's
-default), no key. "Reset" means removing the binding so the default
-shows through, not writing a copy of it. The old global keys
-(`variorum.baseUrl`, `variorum.apiKey`) are dead: ignored if present,
-never migrated, never written.
+**Validation.** The document is a boundary — localStorage is
+user-editable and is the XSS surface — so every read rebuilds it field
+by field, dropping unknown extras, and a document that fails (bad
+JSON, an unknown `api`, a wrong field type, a duplicate (url, api), a
+duplicate handle, a duplicate `modelName` within an endpoint, an
+empty handle or model name) is an error naming the key, never a silent
+reset: resolution fails with it and the tree shows it in place of the
+tree. The module never overwrites a malformed document on its own
+initiative; the fix is the user clearing the key.
 
-The key lives inside the binding, optional, with no default and no
-placeholder: when absent, requests carry no auth header at all
-(`Authorization: Bearer` on OpenAI-compatible, `x-api-key` on
-Messages). LM Studio needs none on either surface, and an endpoint
-that does require one answers with its own auth error — the honest
-signal, better than a made-up value muddying it. Saving an empty key
-field removes the key; empty and unset are the same state, and a
-whitespace-only entry counts as empty. Two models served by the same
-provider each hold their own copy of the key — the duplication is the
-price of one-record-per-model, and it is device-local duplication of a
-value that never travels anyway.
+**First run and migration.** When `variorum.llm` is absent, the first
+read creates it, seeded with one LM Studio endpoint
+(`http://localhost:1234/v1`, OpenAI-compatible, no auth) and no
+models. If legacy per-model records (`variorum.model.<name>`, the
+previous design) exist at that moment they are folded into the same
+write: records with equal (endpointUrl, api) become one endpoint;
+`authRequired` is true when any record in the group carried a key; the
+key moves to the endpoint when every keyed record in the group holds
+the same one and stays on each model otherwise; each record becomes a
+model row with `handle = modelName`, keeping its `maxOutputTokens`;
+the LM Studio endpoint is added only when no group already is it.
+Once the document is written the legacy keys are removed, so the
+migration runs exactly once. Models that had NO stored record used to
+fall through to the LM Studio default; after migration they are
+unbound and hit the error above — the tree's "referenced, not bound"
+list carries them back with one click. The global keys of the design
+before that (`variorum.baseUrl`, `variorum.apiKey`) stay dead:
+ignored, never migrated. The legacy records ARE migrated, unlike
+those two, because they hold keys and per-model caps the user typed.
 
 On the keys: be aware of XSS risks here. I will be imposing npm lockfile
 discipline for myself but if you are forking this, please be careful.
@@ -163,7 +280,7 @@ first render, so there is no light flash on a dark boot.
 copy of the database, and the repository is its only writer; the theme has
 no database presence, so it stays out entirely. The settings control reads
 and writes through the theme module directly — the same pattern as the
-model-binding fields and `transport.ts`.
+Models/Providers view and the transport.
 
 **The editor pane follows for free — almost.** Extensions may not import
 the store or receive a theme prop (the contract grows only on a second
@@ -225,11 +342,11 @@ fallback. Three decisions worth recording:
 Everything lives in a single IndexedDB database. One database, one export, one
 thing to reason about. Configurations (see below) live in that same database
 rather than off in localStorage — one persistence layer, one import/export
-path. The only things outside it are the localStorage residents — model
-bindings (endpoint URL, API kind, key), theme preference, and per-unit
-extension layout state (see "Extension device state" under Extensions) —
-which are device state and deliberately barred from the export path (see
-"Model Bindings").
+path. The only things outside it are the localStorage residents — the
+Models/Providers document (endpoints, protocols, keys), theme
+preference, and per-unit extension layout state (see "Extension device
+state" under Extensions) — which are device state and deliberately
+barred from the export path (see "Models and Providers").
 
 **Schema.** The exact shapes — the three collections (configurations — name
 records, configurationVersions, units) and the inlined Message/Artifact
@@ -654,9 +771,12 @@ The **version records** (keyed by name + version) are the recipe proper:
 - **model identifier** — which model the endpoint should run.
   Deliberately _inside_ the version: swapping qwen for llama changes
   behavior more than any temperature tweak, so it versions like
-  everything else. Also the name the transport resolves a model binding
-  through (see "Model Bindings") — the recipe names the model; the
-  machine says where it lives.
+  everything else. Its value is a model HANDLE — the name the
+  transport resolves through the Models/Providers document (see
+  "Models and Providers") — the recipe names the model; the machine
+  says where it lives. The field keeps its schema name `modelName`:
+  renaming it would change the dump format, the validator, and the
+  merge for a cosmetic gain.
 - **system prompt**
 - **sampling parameters** — temperature, top_p, and top_k (top_k isn't
   standard OpenAI, but LM Studio's `/v1/chat/completions` accepts it;
@@ -753,7 +873,11 @@ five views:
   away in the same dialog.
 - **Add** — the name-record fields (name, description, artifact type) plus
   the first version's recipe (model name, system prompt, temperature,
-  top_p, top_k, reasoning effort). Save calls `createConfiguration`,
+  top_p, top_k, reasoning effort). The model name field is a combobox
+  over the handles in the Models/Providers document that also accepts
+  free text: a configuration may name a handle this machine has not
+  bound yet (an import, a machine set up later), and free entry keeps
+  that legal. Save calls `createConfiguration`,
   minting `name.1`. A duplicate name is rejected by the repository; the
   form surfaces the error and stays open.
 - **Edit** — name and artifact type render read-only (identity and
@@ -765,23 +889,31 @@ five views:
   nothing. The UI does the comparison because the repository method is
   deliberately an unconditional append — "a Save that changes nothing
   mints nothing" is the dialog's promise here.
-- **Models** — a menu entry beside the configuration list (replacing
-  the old global Endpoint view), for the per-model bindings (device
-  state; see "Model Bindings"). One section per distinct model name
-  across the latest saved version of every configuration, archived
-  included — the set of models generation can currently target;
-  binding a model no configuration names is not a flow (create the
-  configuration first). Each section shows the effective binding,
-  stored or default: an API selector (openai-compatible |
-  anthropic-messages), an endpoint URL field, an API key field
-  (password input), and — when the API is anthropic-messages — a max
-  output tokens field. Save requires a parseable http(s) URL and
-  stores the whole binding under `variorum.model.<modelName>`; an
-  empty key field means no key. Reset removes the binding so the
-  default shows through. Device-scoped on purpose — how this machine
+- **Models/Providers** — a menu entry beside the configuration list,
+  for the device-local document that says where models live (see
+  "Models and Providers"). It renders the document as a tree: one node
+  per endpoint, labelled `<url> (<protocol label>)`, with its models
+  beneath it by handle (the wire model name shown alongside when it
+  differs). Endpoints can be added, edited (URL, protocol,
+  authentication required, and — only when required — an API key,
+  password input) and deleted; delete is refused, with the reason,
+  while models remain beneath it. Under an endpoint, models can be
+  added, edited (model name; handle, prefilled from the model name;
+  API key only when the endpoint requires authentication; max output
+  tokens only when the endpoint's protocol adapter declares it),
+  deleted, and reassigned to another endpoint. Save is refused with a
+  message on an unparseable URL, an empty model name or handle, or any
+  uniqueness violation; every save writes the whole document. A model
+  under an auth-required endpoint with no key on either row is flagged
+  in the tree, since that gap is enforced only at request time. Below
+  the tree, "Referenced by configurations, not bound" lists the
+  handles named by the latest saved version of any configuration,
+  archived included, that no model row carries — each with an "Add to
+  endpoint" action that opens the add-model form with model name and
+  handle prefilled. Device-scoped on purpose — how this machine
   reaches a model is not part of any configuration's recipe, so it
   lives outside the version history and outside the export.
-- **Database** — a menu entry beside Endpoint, for the whole-database
+- **Database** — a menu entry beside Models/Providers, for the whole-database
   actions. Three separate buttons with three distinct verbs — Replace is
   never a mode, option, or checkbox of Import, mirroring the repository
   split (see "Import Is a Merge" and "Replace — the wholesale door"):
@@ -912,9 +1044,10 @@ ignores it, behavior degrades exactly to the old heuristic, never worse.
    with the latest saved version of the unit's configuration.
 2. The transport builds the request from that same version: model id,
    system prompt, sampling parameters, reasoning effort — plus the unit's
-   full message history — and resolves the model id's binding to pick
-   the protocol, endpoint, and key (see "Model Bindings"). Nothing is
-   hardcoded; the recipe is the config, the binding is the machine.
+   full message history — and resolves the model handle through the
+   Models/Providers document to pick the protocol, endpoint, and key
+   (see "Models and Providers"). Nothing is hardcoded; the recipe is
+   the config, the document is the machine.
 3. While waiting, the Loader animates (`useChat` status `submitted`);
    once streaming, text and reasoning deltas render live. Streaming state
    lives entirely in `useChat` (see State Architecture) — nothing touches
@@ -1082,10 +1215,13 @@ validator learns both fields by hand, and they join import-merge
 byte-equality — correctly, since two histories differing in a notice are
 different conversations.
 
-**Errors.** A failed request (endpoint down, CORS off, or a truncated
-response — see above) is a boundary: an inline error row in the
-transcript with a Retry that re-sends without re-appending the
-already-persisted user message.
+**Errors.** A failed request (endpoint down, CORS off, a truncated
+response — see above — or a handle that does not resolve, see "Models
+and Providers") is a boundary: an inline error row in the transcript
+with a Retry that re-sends without re-appending the already-persisted
+user message. A resolution failure never reaches the network; it is
+the same error row, so fixing the tree and pressing Retry is the whole
+recovery.
 
 **The composer locks while a response is in flight.** While a response
 is pending or streaming, the message textarea is disabled and the only
@@ -1328,7 +1464,15 @@ src/
 │   ├── store.ts                 # the Zustand store + the dirty-since-export bit
 │   └── selectors.ts             # ALL reads
 ├── llm/
-│   ├── transport.ts             # model bindings; one provider per binding's protocol
+│   ├── provider-document.ts     # the variorum.llm document: shape, validator, read/write, seed
+│   ├── provider-migration.ts    # one-shot fold of legacy variorum.model.* records
+│   ├── resolve-model.ts         # handle → resolved model; the two resolve-time errors
+│   ├── chat-transport.ts        # the ChatTransport: resolve, prepare via the adapter, streamText
+│   ├── protocols/               # one adapter per wire protocol — see "LLM Provider Interface"
+│   │   ├── adapter.ts           # the ProtocolAdapter contract
+│   │   ├── registry.ts          # adapters keyed by protocol id; THE list of protocols
+│   │   ├── openai-compatible.ts
+│   │   └── anthropic-messages.ts
 │   ├── tools.ts                 # the model's four tools; the HITL gate hook
 │   └── mapping.ts               # SDK boundary → AssistantCompletion
 ├── extensions/                  # the plugin surface — see Extensions

@@ -102,6 +102,10 @@ never restate. When asked to "document" something, route it:
   adding an artifact-editor extension. Steps only; every why lives in
   DESIGN.md "Extensions". Update only when the contract or the steps
   change.
+- **`design/adding-an-api-surface.md`** — the mechanics checklist for
+  adding a wire protocol adapter. Steps only; every why lives in
+  DESIGN.md "LLM Provider Interface". Update only when the contract or
+  the steps change.
 
 If a documentation change seems to need the same information in two files,
 put the substance in DESIGN.md and a link in the other file.
@@ -150,8 +154,9 @@ Data model:
   stores: `configurations` (name records: description, artifactType,
   archived), `configurationVersions` (immutable recipes), `units`. Shapes
   are declared in `design/application-schema.yaml`. The only exceptions:
-  per-model endpoint bindings (`variorum.model.<modelName>`: API kind,
-  endpoint URL, API key, max output tokens), the device theme preference,
+  the Models/Providers document (`variorum.llm`: endpoints with URL,
+  protocol, auth flag and key, each holding its models with wire name,
+  handle, key, max output tokens), the device theme preference,
   and per-unit extension layout state (`variorum.ext.<extensionId>.<unitId>`)
   live in localStorage (device state — never in the Zustand store, never
   in an export), as does the per-model token-ratio calibration
@@ -225,11 +230,16 @@ LLM tool surface:
 - Lockfile discipline: commit the lockfile, install with `npm ci`,
   `ignore-scripts` in `.npmrc`, keep direct dependencies minimal, take
   updates deliberately.
-- The LLM transport speaks the protocol the model's binding names —
-  OpenAI-compatible or Anthropic Messages — resolved per request from
-  `variorum.model.<modelName>`; sampling parameters (temperature, top_p,
-  top_k) and reasoning effort come from the active configuration version —
-  never hardcode them.
+- The LLM transport speaks the protocol of the endpoint the model's
+  handle resolves to, resolved per request from `variorum.llm`; a
+  handle with no row, or no key where the endpoint requires one, is a
+  request-time error — never a silent default endpoint. Sampling
+  parameters (temperature, top_p, top_k) and reasoning effort come from
+  the active configuration version — never hardcode them.
+- Protocol-specific code lives ONLY in `src/llm/protocols/<protocol>.ts`,
+  reached through `registry.ts`. Nothing outside that directory names a
+  protocol literal; a new wire protocol is a new adapter file, never a
+  branch elsewhere. See `design/adding-an-api-surface.md`.
 - Source layering (see DESIGN.md "Source Layout"): imports point downward
   only — components → state / llm → persistence → domain. `repository.ts`
   is the ONLY importer of `indexed-db-wrapper.ts`, and it declares
