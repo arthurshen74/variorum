@@ -17,9 +17,17 @@ export function ClassNode({ data }: NodeProps<ClassFlowNode>) {
   const { name, description, rows, relationHandles } = data;
 
   return (
-    <div className="min-w-40 rounded-md border bg-card text-card-foreground shadow-sm">
-      <Handle type="target" position={Position.Left} className="!bg-border" />
-      <Handle type="source" position={Position.Right} className="!bg-border" />
+    <div className="min-w-40 max-w-64 rounded-md border bg-card text-card-foreground shadow-sm">
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!bg-border"
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="!bg-border"
+      />
       {relationHandles.map((slotName, index) => (
         <Handle
           key={slotName}
@@ -27,7 +35,9 @@ export function ClassNode({ data }: NodeProps<ClassFlowNode>) {
           type="source"
           position={Position.Right}
           className="!bg-border"
-          style={{ top: `${((index + 1) / (relationHandles.length + 1)) * 100}%` }}
+          style={{
+            top: `${((index + 1) / (relationHandles.length + 1)) * 100}%`,
+          }}
         />
       ))}
 
@@ -35,7 +45,7 @@ export function ClassNode({ data }: NodeProps<ClassFlowNode>) {
         {name}
       </div>
       {description === undefined ? null : (
-        <div className="px-2 pt-1 text-[10px] text-muted-foreground">
+        <div className="px-1 pt-1 text-[9px] text-muted-foreground text-wrap border-b-1 italic">
           {description}
         </div>
       )}
