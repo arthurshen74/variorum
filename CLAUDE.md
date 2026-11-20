@@ -121,6 +121,18 @@ Data model:
 - Generation always uses the **latest saved version** of the unit's
   configuration. Every response is tagged with the exact config version
   (`name.N`) that produced it.
+- The model-choice controls (New Unit dialog, chat error row) are Saves:
+  each names the version it mints before it is pressed, and mints
+  nothing otherwise. Never rebind a configuration's model silently, and
+  never per unit. See DESIGN.md "First-Run Setup".
+- A configuration named `link-ml` (the built-in) always exists.
+  `ensureBuiltInConfiguration` creates `link-ml.1` only when no name
+  record carries the name (archived counts), after boot and after every
+  successful replace — never inside `boot()` or `replaceDatabase`. It
+  never updates, restores, or re-syncs an existing record.
+  `src/domain/seed-configuration.ts` is hand-written constants: a
+  configuration only, never a unit, never generated from or reading a
+  dump.
 - A **unit** (conversation + artifact) is bound to one configuration _name_
   at creation, for life. No re-pointing a unit at a different configuration.
 - Units are atomic: the artifact and its conversation are never deleted
@@ -236,6 +248,10 @@ LLM tool surface:
   request-time error — never a silent default endpoint. Sampling
   parameters (temperature, top_p, top_k) and reasoning effort come from
   the active configuration version — never hardcode them.
+- `variorum.llm` is never seeded: an absent document is an empty one,
+  and an endpoint exists only because a human saved it. The setup gate
+  (DESIGN.md "First-Run Setup") is the walk to the first one, and it
+  never overwrites a malformed document.
 - Protocol-specific code lives ONLY in `src/llm/protocols/<protocol>.ts`,
   reached through `registry.ts`. Nothing outside that directory names a
   protocol literal; a new wire protocol is a new adapter file, never a

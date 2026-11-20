@@ -16,6 +16,8 @@ export interface DatabasePorts {
     dump: DatabaseDump,
     deliverBackup: (backup: DatabaseDump) => Promise<void>,
   ): Promise<DatabaseDump>;
+  /** The built-in configuration check that follows a successful replace. */
+  ensureBuiltInConfiguration(): Promise<unknown>;
   deliverExport(dump: DatabaseDump): Promise<void>;
   deliverBackup(backup: DatabaseDump): Promise<void>;
   readDumpFile(): Promise<DatabaseDump | null>;

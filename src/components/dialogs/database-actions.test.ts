@@ -47,6 +47,7 @@ function makePorts(overrides: Partial<DatabasePorts> = {}): DatabasePorts {
     exportDatabase: vi.fn(async () => {}),
     importDatabase: vi.fn(async () => EMPTY_REPORT),
     replaceDatabase: vi.fn(async () => EMPTY_DUMP),
+    ensureBuiltInConfiguration: vi.fn(async () => null),
     deliverExport: vi.fn(async () => {}),
     deliverBackup: vi.fn(async () => {}),
     readDumpFile: vi.fn(async () => EMPTY_DUMP),

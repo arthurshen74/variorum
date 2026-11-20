@@ -295,6 +295,18 @@ export interface VariorumRepository {
   archiveConfiguration(name: string): Promise<Configuration>;
   restoreConfiguration(name: string): Promise<Configuration>;
 
+  /**
+   * The built-in configuration check (DESIGN.md "First-Run Setup").
+   * Queued like every write. When no name record carries the built-in
+   * name — an archived record counts as present — writes the name record
+   * and version 1 from domain/seed-configuration.ts in ONE transaction,
+   * as createConfiguration does, and returns the version. Otherwise
+   * writes nothing and returns null. Never updates, restores, or
+   * re-syncs an existing record. Called after boot and after every
+   * successful replace; never from inside boot or replaceDatabase.
+   */
+  ensureBuiltInConfiguration(): Promise<ConfigurationVersion | null>;
+
   // ---- Danger zone ------------------------------------------------------
   // Interface-only. The model can never trigger any of these.
 

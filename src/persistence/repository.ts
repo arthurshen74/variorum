@@ -414,6 +414,10 @@ class Repository implements VariorumRepository {
     });
   }
 
+  ensureBuiltInConfiguration(): Promise<ConfigurationVersion | null> {
+    throw new Error('not implemented: ensureBuiltInConfiguration');
+  }
+
   // ---- Danger zone (interface-only) ---------------------------------------
 
   exportDatabase(

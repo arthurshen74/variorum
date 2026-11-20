@@ -35,6 +35,7 @@ const PORTS: DatabasePorts = {
   },
   importDatabase: (dump) => repository.importDatabase(dump),
   replaceDatabase: (dump, deliver) => repository.replaceDatabase(dump, deliver),
+  ensureBuiltInConfiguration: () => repository.ensureBuiltInConfiguration(),
   deliverExport,
   deliverBackup,
   readDumpFile,

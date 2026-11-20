@@ -201,16 +201,20 @@ tree. The module never overwrites a malformed document on its own
 initiative; the fix is the user clearing the key.
 
 **First run and migration.** When `variorum.llm` is absent, the first
-read creates it, seeded with one LM Studio endpoint
-(`http://localhost:1234/v1`, OpenAI-compatible, no auth) and no
-models. If legacy per-model records (`variorum.model.<name>`, the
-previous design) exist at that moment they are folded into the same
-write: records with equal (endpointUrl, api) become one endpoint;
+read creates it EMPTY — no endpoints. Nothing is seeded: an endpoint
+exists on this machine only because a human saved it, and the walk to
+the first one is the setup gate's job (see "First-Run Setup"). An
+earlier design wrote an LM Studio endpoint here. It was dropped for
+the reason the "unbound model goes to LM Studio" fallback was — a
+host the user never named — and because an endpoint with no models
+beneath it passed for "configured" while nothing could be sent. If
+legacy per-model records (`variorum.model.<name>`, the previous
+design) exist at that moment they are folded into the same write:
+records with equal (endpointUrl, api) become one endpoint;
 `authRequired` is true when any record in the group carried a key; the
 key moves to the endpoint when every keyed record in the group holds
 the same one and stays on each model otherwise; each record becomes a
-model row with `handle = modelName`, keeping its `maxOutputTokens`;
-the LM Studio endpoint is added only when no group already is it.
+model row with `handle = modelName`, keeping its `maxOutputTokens`.
 Once the document is written the legacy keys are removed, so the
 migration runs exactly once. Models that had NO stored record used to
 fall through to the LM Studio default; after migration they are
@@ -656,6 +660,11 @@ object the repository validated but never proved exists as a durable file
 on disk. So replace marks dirty, and prune refuses until a fresh export —
 at the cost of one export click.
 
+**One write may follow.** `replaceDatabase` loads the dump and nothing
+else. The orchestration that called it then runs the built-in
+configuration check (see "First-Run Setup") — a separate queued write,
+never part of the replace transaction.
+
 Replace changes no component contract: nothing points at units, and a
 selection left dangling by a replace already degrades to the empty state.
 Like export, import, and prune, replace is interface-only forever — the
@@ -967,7 +976,10 @@ units, click to load). This adds:
   name plus a picker over active configurations. Create calls
   `createUnit`, selects the new unit, and closes. With zero active
   configurations the + button is disabled with a hint, because a unit
-  cannot exist without a configuration binding.
+  cannot exist without a configuration binding. When the chosen
+  configuration names a model this machine has not bound, the dialog
+  also asks for one (see "Choosing a model at use" under "First-Run
+  Setup").
 - **Rename** — a per-row pencil icon swaps the unit's name for a text
   input, prefilled with the current name. Enter commits via
   `renameConversation`; Escape or blur cancels; a commit whose trimmed
@@ -994,6 +1006,180 @@ Radix-flavored shadcn, and one primitive layer per app is the same rule
 that rejected Catalyst. Revisit when AI Elements supports Base UI; shadcn
 kept one abstraction over both, so the move stays mechanical. AppShell
 owns which dialog is open, the same way it owns the selected unit.
+
+## First-Run Setup
+
+A fresh clone used to open onto nothing: no endpoint that could answer,
+no model, no configuration, no unit — and each absence was its own dead
+end (a disabled + button, an empty picker, an error row on the first
+send). This is the walk from empty to a first response. The rule that
+divides the work: **the app ships what can be shipped and asks for what
+only this machine's owner knows.** A recipe can ship. Where this machine
+finds a model cannot.
+
+So there are three pieces: a configuration that is always there, a gate
+that asks for an endpoint and a model, and a model choice offered at
+the moment a configuration turns out to name a model this machine does
+not have.
+
+**The built-in configuration.** A configuration named `link-ml` always
+exists. `ensureBuiltInConfiguration` — a repository method, queued like
+every other write — creates it when no name record carries that name:
+the name record and version 1 in one transaction, as
+`createConfiguration` does. It runs after `boot()`, before the first
+render, and after every successful replace, replace being the only
+operation that can remove the record.
+
+- **Present means a name record exists, archived or not.** An archived
+  `link-ml` is left archived — archiving it was the user's act, and
+  restore is one click away in the Configurations dialog. The + button's
+  zero-active-configurations hint still covers that state.
+- **The check is by name, not "the store is empty".** A database
+  replaced by a dump that has configurations but no `link-ml` gets it
+  added alongside them.
+- **After creation it is an ordinary configuration**: it gains versions
+  through Save, archives, exports, and merges like any other. The app
+  never updates, restores, or re-syncs it. If a later release ships a
+  different built-in recipe, only databases created afterwards see it —
+  versions are immutable, and a user's `link-ml.2` is theirs.
+- **It ships no units.** The content is hand-written constants in
+  `src/domain/seed-configuration.ts`, typed as the two arguments of
+  `createConfiguration` — a shape with nowhere to put a unit. The file
+  is never generated from, and never reads, a database dump: a dump
+  carries conversations, and a seed derived from one is a careless edit
+  away from shipping them.
+- **Its `modelName` is a handle like any other**, and on most fresh
+  machines no row carries it. That is deliberate: version 1 is written
+  before any model exists here, and a version with no model name is not
+  a legal record. The gap is closed at use (below), not at seed time.
+
+Why a repository method and not a branch inside `boot()` or
+`replaceDatabase`: `boot` is a read, and replace's whole contract is
+"make this machine exactly that dump" in one transaction — the built-in
+is a statement about the app, not about the dump. So the check is its
+own write, and its two callers are `main.tsx` and `runReplace`, the one
+orchestration every replace surface goes through. Boot repeating the
+check is the backstop: a replace whose follow-up write never ran heals
+at the next load. The write is a mutation like any other and sets the
+dirty-since-export bit.
+
+Merge needs no check — import never deletes. It does have a consequence
+worth knowing: a dump whose `link-ml` begins with a different version 1
+is a diverged lineage and lands under a fresh name (see "Diverged
+configuration lineages"), while a dump from a database that began with
+the same built-in merges as a prefix or a fast-forward. Bringing an
+older database to a new machine is replace's job, which is why the gate
+offers it.
+
+**The setup gate.** At load, the shell reads the Models/Providers
+document. If it holds no endpoint, or no model under any endpoint, a
+dialog opens over the shell and cannot be dismissed — no close X,
+Escape and outside clicks do nothing — until the document holds at
+least one of each:
+
+- **No endpoint** → the Add Endpoint form, the same form the
+  Models/Providers view uses, prefilled with LM Studio's default
+  (`http://localhost:1234/v1`, OpenAI-compatible, no authentication).
+  The prefill is text in a field; nothing is written until Save.
+- **No model** → the Add Model form, with the endpoint picker the form
+  already has when the document holds several endpoints.
+
+Validation, refusal messages, and whole-document writes are the
+tree's, because the forms and the mutations are the tree's. Neither
+form offers Cancel here. The gate closes itself after the save that
+satisfies it.
+
+Blocking, not a hint, because with no model every path through the app
+ends at the same error row; the gate is that error moved to where two
+forms can fix it. It checks once, at load. Deleting the last model
+mid-session does not raise it — the user is standing in the tree that
+fixes it, and a blocking dialog over the dialog they are working in
+would only fight them; the next load asks again. A malformed document
+does not raise it either: the gate cannot tell which step is missing
+and must never overwrite the document (see "Validation" under "Models
+and Providers"), so the tree and the error row go on naming the key as
+they do today.
+
+The gate knows nothing about configurations — it creates, picks, and
+binds none. Which step is showing is derived from the document by a
+pure function; the document is device state and stays out of the
+store, so the gate holds it in component state exactly as the
+Models/Providers view does.
+
+**Restore from backup, on the gate.** A returning user on a new machine
+wants their own database before anything else, and without this they
+would have to finish setup to reach the Database view. The gate offers
+the same replace flow that view has — file first, explicit confirmation
+naming both consequences, then `replaceDatabase` with the anchor
+deliverer. The pre-wipe backup is taken even when the database holds
+only the built-in: the backup has no parameter to skip it, and the gate
+does not get one. Replace only, never import: on the machine the gate
+exists for, the database holds only the built-in, and a backup's own
+`link-ml` merged into that would usually land as a diverged lineage
+under a fresh name. A restore does not close the gate — a dump carries
+no endpoints — so the endpoint and model steps follow it.
+
+**Choosing a model at use.** A configuration's latest saved version may
+name a handle this machine has no row for: the built-in on a fresh
+machine, or any configuration after a replace or an import from another
+machine. Two surfaces offer the fix where the user runs into it. Both
+do one thing — save the next version of the configuration, identical to
+the latest except for `modelName`:
+
+- **The New Unit dialog.** When the chosen configuration's handle is
+  not bound, the dialog adds a Model picker over the handles in the
+  document and a line naming what Create will do: the designator it
+  saves and the model it names (`Saves link-ml.2 with model <handle>`).
+  Create calls `saveConfigurationVersion`, then `createUnit`. When the
+  handle is bound the dialog is unchanged: no picker, nothing saved.
+  When the document holds no model at all — the last one deleted
+  mid-session, or a malformed document — Create is disabled and a hint
+  points at Models/Providers.
+- **The chat error row.** When a request has failed and the unit's
+  configuration names an unbound handle, the row adds the same picker
+  and a button labelled with the designator it saves (`Save link-ml.2
+  and retry`). It saves the version, then re-sends exactly as Retry
+  does. Retry itself stays: binding the handle in the tree and retrying
+  is still a complete recovery. The offer is derived from the
+  configuration and the document, never parsed out of the error text.
+  A missing API key gets no picker — that handle IS bound; what is
+  missing is a key, and keys live in the tree. With no model in the
+  document the row offers nothing extra; the error text already points
+  at Models/Providers.
+
+Version first, then unit. A failure between the two leaves a saved
+version and no unit, a state the Configurations dialog could have
+produced by hand, and pressing Create again finds the handle bound and
+only creates the unit. The other order would leave a unit whose first
+send fails.
+
+**These are Saves.** A version is minted only by an explicit human
+Save, and both controls are one: the designator about to be minted is
+on the control before it is pressed, and nothing is saved on open, on
+selection, or when the handle already resolves. The picker starts on
+the first handle, as the configuration picker starts on the first
+configuration — the explicit act is the labelled button, not a forced
+trip through a one-option menu.
+
+The new version belongs to the configuration, so every unit bound to it
+uses the chosen model from its next request. That is what the label
+says — a designator, not "this conversation" — and it is the only
+honest scope available. Considered and rejected:
+
+- _A per-unit model override._ It breaks "generation always uses the
+  latest saved version" and makes the response tag `link-ml.1` assert a
+  model that did not write the response.
+- _Binding the missing handle from the picker._ The document would gain
+  a row whose handle names one model while its wire name is another.
+  When this machine really does serve that model under another wire
+  name, the tree's "Add to endpoint" is the route — a deliberate edit
+  there, not a side effect of starting a conversation.
+- _Rebinding automatically when exactly one model exists._ A version
+  nobody asked for.
+
+Sampling parameters and reasoning effort carry over unchanged even
+though they were tuned against another model: they are the recipe's,
+and the Configurations dialog is where a recipe changes.
 
 ## Chat
 
@@ -1221,7 +1407,8 @@ and Providers") is a boundary: an inline error row in the transcript
 with a Retry that re-sends without re-appending the already-persisted
 user message. A resolution failure never reaches the network; it is
 the same error row, so fixing the tree and pressing Retry is the whole
-recovery.
+recovery. For a handle no row carries, the row also offers a model
+picker (see "Choosing a model at use" under "First-Run Setup").
 
 **The composer locks while a response is in flight.** While a response
 is pending or streaming, the message textarea is disabled and the only
@@ -1449,11 +1636,12 @@ nothing at all (see Extensions).
 
 ```
 src/
-├── main.tsx                     # await repository.boot() → render
+├── main.tsx                     # await repository.boot() → built-in check → render
 ├── App.tsx                      # three-pane shell wiring
 ├── index.css                    # Tailwind + shadcn tokens — THE theming file
 ├── domain/                      # pure TS, zero React, zero IO
 │   ├── types.ts                 # runtime types mirroring application-schema.yaml
+│   ├── seed-configuration.ts    # the built-in configuration: hand-written constants, no units
 │   ├── extract.ts               # fence extractor: artifactType → lift code block
 │   ├── merge.ts                 # import-merge, a pure function (the most test-worthy code)
 │   └── dump-file.ts             # serialize / parse+validate a dump — text in, text out, no IO
@@ -1464,7 +1652,7 @@ src/
 │   ├── store.ts                 # the Zustand store + the dirty-since-export bit
 │   └── selectors.ts             # ALL reads
 ├── llm/
-│   ├── provider-document.ts     # the variorum.llm document: shape, validator, read/write, seed
+│   ├── provider-document.ts     # the variorum.llm document: shape, validator, read/write
 │   ├── provider-mutations.ts    # pure add/edit/delete/reassign over the document; the uniqueness rules
 │   ├── provider-migration.ts    # one-shot fold of legacy variorum.model.* records
 │   ├── resolve-model.ts         # handle → resolved model; the two resolve-time errors
@@ -1485,6 +1673,7 @@ src/
     ├── ui/                      # shadcn primitives (generated)
     ├── ai-elements/             # AI Elements components (generated)
     ├── shell/                   # AppShell, Sidebar, ChatPane
+    ├── setup/                   # the setup gate and the model-choice control — see "First-Run Setup"
     ├── artifact/                # ArtifactPane (tabs, working copy, Save), RevisionHistory
     ├── chat/                    # messages, reasoning (CoT), loaders, tool confirmations
     └── dialogs/                 # Configurations, NewUnit, ArchiveConfirm, Export/Import, Prune

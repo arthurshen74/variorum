@@ -29,6 +29,12 @@ export class MissingApiKeyError extends Error {
   }
 }
 
+/** Every handle the document binds, in document order. */
+export function boundHandles(document: ProviderDocument): string[] {
+  void document;
+  throw new Error('not implemented: boundHandles');
+}
+
 export function resolveModel(
   document: ProviderDocument,
   handle: string,
