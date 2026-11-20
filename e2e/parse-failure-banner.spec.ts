@@ -55,10 +55,7 @@ async function seedLinkmlUnit(page: Page, contents: string[]): Promise<string> {
   const unitId = await page.evaluate(
     async (revisions) => {
       const { repository } = (window as unknown as DevWindow).variorum;
-      await repository.createConfiguration(
-        { name: 'link-ml', artifactType: 'yaml' },
-        { modelName: 'mock-model', systemPrompt: 'You produce LinkML.' },
-      );
+      // The built-in link-ml exists from load (DESIGN.md "First-Run Setup").
       const unit = await repository.createUnit('schema', 'link-ml');
       for (const content of revisions) {
         await repository.saveManualEdit(unit.id, content);

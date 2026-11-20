@@ -4,6 +4,7 @@
  * extension is the default tab.
  */
 import { lazy } from 'react';
+import { BUILT_IN_CONFIGURATION_NAME } from '@/domain/seed-configuration';
 import type { ExtensionContext, ExtensionDefinition } from './extension';
 
 export const extensions: ExtensionDefinition[] = [
@@ -11,7 +12,7 @@ export const extensions: ExtensionDefinition[] = [
     id: 'linkml-graph',
     title: 'Graph',
     // The configuration NAME, not the artifact type: yaml is too broad.
-    appliesTo: (ctx) => ctx.configName === 'link-ml',
+    appliesTo: (ctx) => ctx.configName === BUILT_IN_CONFIGURATION_NAME,
     // The parser only, never the component: a validity probe must not drag
     // the viewer chunk in behind it.
     validates: async (content: string): Promise<boolean> => {

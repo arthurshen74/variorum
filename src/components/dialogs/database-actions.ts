@@ -77,13 +77,18 @@ export async function pickReplaceFile(
   }
 }
 
-/** Replace step 2, after explicit confirmation: backup-then-wipe. */
+/**
+ * Replace step 2, after explicit confirmation: backup-then-wipe, then the
+ * built-in configuration check. A failed check reports as an error even
+ * though the replace landed; the next load runs the check again.
+ */
 export async function runReplace(
   ports: DatabasePorts,
   dump: DatabaseDump,
 ): Promise<ActionOutcome> {
   try {
     await ports.replaceDatabase(dump, ports.deliverBackup);
+    await ports.ensureBuiltInConfiguration();
   } catch (error) {
     return { kind: 'error', message: errorMessage(error) };
   }

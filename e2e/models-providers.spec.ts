@@ -454,7 +454,10 @@ test('[G4] an unbound handle shows the exact error row with no request leaving t
     await expect(
       modelItem(endpointGroup(dialog, endpoint), 'ghost'),
     ).toBeVisible();
-    await expect(hint).toBeHidden();
+    // The built-in link-ml's own unbound handle keeps the list showing.
+    await expect(
+      hint.getByRole('listitem').filter({ hasText: 'ghost' }),
+    ).toHaveCount(0);
     await page.keyboard.press('Escape');
 
     await page.getByRole('button', { name: 'Retry' }).click();
@@ -566,7 +569,9 @@ test("[G4] the configuration form's Model field offers the document's handles an
     const { repository } = (window as unknown as DevWindow).variorum;
     return repository.exportDatabase(async () => {});
   });
-  expect(dump.configurationVersions).toEqual([
+  expect(
+    dump.configurationVersions.filter((v) => v.name === 'free'),
+  ).toEqual([
     expect.objectContaining({
       name: 'free',
       version: 1,

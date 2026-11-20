@@ -47,15 +47,12 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Variorum' })).toBeVisible();
 });
 
-/** Seeds a linkml configuration + unit with SCHEMA saved, selects it. */
+/** Seeds a unit on the built-in link-ml with SCHEMA saved, selects it. */
 async function seedLinkmlUnit(page: Page, name = 'schema'): Promise<string> {
   const unitId = await page.evaluate(
     async ({ name, content }) => {
       const { repository } = (window as unknown as DevWindow).variorum;
-      await repository.createConfiguration(
-        { name: 'link-ml', artifactType: 'yaml' },
-        { modelName: 'mock-model', systemPrompt: 'You produce LinkML.' },
-      );
+      // The built-in link-ml exists from load (DESIGN.md "First-Run Setup").
       const unit = await repository.createUnit(name, 'link-ml');
       await repository.saveManualEdit(unit.id, content);
       return unit.id;

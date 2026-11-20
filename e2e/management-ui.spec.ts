@@ -33,6 +33,7 @@ interface DevRepository {
     conversationName: string,
     configName: string,
   ): Promise<{ id: string }>;
+  archiveConfiguration(name: string): Promise<unknown>;
   exportDatabase(deliver: (dump: Dump) => Promise<void>): Promise<Dump>;
 }
 
@@ -60,6 +61,14 @@ function exportDump(page: Page): Promise<Dump> {
   });
 }
 
+function versionsOf(dump: Dump, name: string) {
+  return dump.configurationVersions.filter((v) => v.name === name);
+}
+
+function configurationOf(dump: Dump, name: string) {
+  return dump.configurations.find((c) => c.name === name);
+}
+
 async function openConfigurations(page: Page) {
   await page.getByRole('button', { name: 'Configurations' }).click();
   const dialog = page.getByRole('dialog');
@@ -81,9 +90,9 @@ test('[G2] creating a configuration through the dialog lists it and mints versio
 
   await expect(dialog.getByText('linkml')).toBeVisible();
   const dump = await exportDump(page);
-  expect(dump.configurations.map((c) => c.name)).toEqual(['linkml']);
-  expect(dump.configurationVersions).toHaveLength(1);
-  expect(dump.configurationVersions[0]).toMatchObject({
+  expect(dump.configurations.map((c) => c.name)).toEqual(['link-ml', 'linkml']);
+  expect(versionsOf(dump, 'linkml')).toHaveLength(1);
+  expect(versionsOf(dump, 'linkml')[0]).toMatchObject({
     name: 'linkml',
     version: 1,
     modelName: 'test-model',
@@ -106,7 +115,7 @@ test('[G2] a duplicate configuration name shows an error and the dialog stays op
   await expect(dialog.getByRole('alert')).toBeVisible();
   await expect(dialog).toBeVisible();
   const dump = await exportDump(page);
-  expect(dump.configurationVersions).toHaveLength(1);
+  expect(versionsOf(dump, 'linkml')).toHaveLength(1);
 });
 
 test('[G2] editing the recipe and saving mints version 2; name and artifact type are read-only in Edit', async ({
@@ -117,7 +126,7 @@ test('[G2] editing the recipe and saving mints version 2; name and artifact type
   const dialog = await openConfigurations(page);
   await dialog
     .getByRole('listitem')
-    .filter({ hasText: 'linkml' })
+    .filter({ has: page.getByText('linkml', { exact: true }) })
     .getByRole('button', { name: 'Edit' })
     .click();
 
@@ -129,10 +138,12 @@ test('[G2] editing the recipe and saving mints version 2; name and artifact type
 
   const dump = await exportDump(page);
   expect(
-    dump.configurationVersions.map((v) => v.version).sort((a, b) => a - b),
+    versionsOf(dump, 'linkml')
+      .map((v) => v.version)
+      .sort((a, b) => a - b),
   ).toEqual([1, 2]);
   expect(
-    dump.configurationVersions.find((v) => v.version === 2)?.systemPrompt,
+    versionsOf(dump, 'linkml').find((v) => v.version === 2)?.systemPrompt,
   ).toBe('v2 prompt');
 });
 
@@ -144,14 +155,14 @@ test('[G2] saving the Edit form untouched mints no version and no description wr
   const dialog = await openConfigurations(page);
   await dialog
     .getByRole('listitem')
-    .filter({ hasText: 'linkml' })
+    .filter({ has: page.getByText('linkml', { exact: true }) })
     .getByRole('button', { name: 'Edit' })
     .click();
   await dialog.getByRole('button', { name: 'Save' }).click();
 
   const dump = await exportDump(page);
-  expect(dump.configurationVersions).toHaveLength(1);
-  expect(dump.configurations[0]?.description).toBe('seed');
+  expect(versionsOf(dump, 'linkml')).toHaveLength(1);
+  expect(configurationOf(dump, 'linkml')?.description).toBe('seed');
 });
 
 test('[G2] changing only the description updates it without minting a version', async ({
@@ -162,15 +173,17 @@ test('[G2] changing only the description updates it without minting a version', 
   const dialog = await openConfigurations(page);
   await dialog
     .getByRole('listitem')
-    .filter({ hasText: 'linkml' })
+    .filter({ has: page.getByText('linkml', { exact: true }) })
     .getByRole('button', { name: 'Edit' })
     .click();
   await dialog.getByLabel('Description').fill('sharper description');
   await dialog.getByRole('button', { name: 'Save' }).click();
 
   const dump = await exportDump(page);
-  expect(dump.configurations[0]?.description).toBe('sharper description');
-  expect(dump.configurationVersions).toHaveLength(1);
+  expect(configurationOf(dump, 'linkml')?.description).toBe(
+    'sharper description',
+  );
+  expect(versionsOf(dump, 'linkml')).toHaveLength(1);
 });
 
 test('[G2] closing the dialog mid-edit discards the draft; reopening shows the latest saved recipe', async ({
@@ -181,7 +194,7 @@ test('[G2] closing the dialog mid-edit discards the draft; reopening shows the l
   let dialog = await openConfigurations(page);
   await dialog
     .getByRole('listitem')
-    .filter({ hasText: 'linkml' })
+    .filter({ has: page.getByText('linkml', { exact: true }) })
     .getByRole('button', { name: 'Edit' })
     .click();
   await dialog.getByLabel('System prompt').fill('abandoned draft');
@@ -191,12 +204,12 @@ test('[G2] closing the dialog mid-edit discards the draft; reopening shows the l
   dialog = await openConfigurations(page);
   await dialog
     .getByRole('listitem')
-    .filter({ hasText: 'linkml' })
+    .filter({ has: page.getByText('linkml', { exact: true }) })
     .getByRole('button', { name: 'Edit' })
     .click();
   await expect(dialog.getByLabel('System prompt')).toHaveValue('v1');
   const dump = await exportDump(page);
-  expect(dump.configurationVersions).toHaveLength(1);
+  expect(versionsOf(dump, 'linkml')).toHaveLength(1);
 });
 
 test('[G2] an archived configuration leaves the new-unit picker; restore returns it', async ({
@@ -217,7 +230,7 @@ test('[G2] an archived configuration leaves the new-unit picker; restore returns
 
   await page.getByRole('button', { name: 'New unit' }).click();
   let picker = page.getByRole('dialog').getByLabel('Configuration');
-  await expect(picker.locator('option')).toHaveText(['alpha']);
+  await expect(picker.locator('option')).toHaveText(['link-ml', 'alpha']);
   await page.keyboard.press('Escape');
 
   dialog = await openConfigurations(page);
@@ -231,13 +244,22 @@ test('[G2] an archived configuration leaves the new-unit picker; restore returns
 
   await page.getByRole('button', { name: 'New unit' }).click();
   picker = page.getByRole('dialog').getByLabel('Configuration');
-  await expect(picker.locator('option')).toHaveText(['alpha', 'beta']);
+  await expect(picker.locator('option')).toHaveText([
+    'link-ml',
+    'alpha',
+    'beta',
+  ]);
 });
 
 test('[G2] the New unit button is disabled with zero active configurations and enabled once one exists', async ({
   page,
 }) => {
   await openApp(page);
+  // The built-in link-ml is active from load; archive it to reach zero.
+  await page.evaluate(async () => {
+    const { repository } = (window as unknown as DevWindow).variorum;
+    await repository.archiveConfiguration('link-ml');
+  });
   const newUnit = page.getByRole('button', { name: 'New unit' });
   await expect(newUnit).toBeDisabled();
   await seedConfiguration(page, 'linkml');

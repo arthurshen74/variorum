@@ -126,7 +126,10 @@ test('[G3] the downloaded backup restores the pre-replace database', async ({
     return repository.exportDatabase(async () => {});
   }, backup);
 
-  expect(restored.configurations.map((c) => c.name)).toEqual(['linkml']);
+  expect(restored.configurations.map((c) => c.name)).toEqual([
+    'link-ml',
+    'linkml',
+  ]);
   expect(restored.units.map((u) => u.conversationName)).toEqual([
     'seeded thread',
   ]);
@@ -232,6 +235,7 @@ test('[G3] a dump chosen from the file input merges into the database', async ({
   });
   expect(after.configurations.map((c) => c.name).sort()).toEqual([
     'from-file',
+    'link-ml',
     'linkml',
   ]);
 });

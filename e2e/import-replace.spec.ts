@@ -134,6 +134,6 @@ test('[G2] a replaced database survives reload', async ({ page }) => {
     return repository.exportDatabase(async () => {});
   });
 
-  expect(after.configurations.map((c) => c.name)).toEqual(['fresh']);
+  expect(after.configurations.map((c) => c.name)).toEqual(['fresh', 'link-ml']);
   expect(after.units.map((u) => u.id)).toEqual(['fresh-u1']);
 });

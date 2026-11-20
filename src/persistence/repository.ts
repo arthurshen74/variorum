@@ -22,6 +22,11 @@ import type {
   VariorumRepository,
 } from '@design/repository-api';
 import { SCHEMA_VERSION } from '@/domain/types';
+import {
+  BUILT_IN_CONFIGURATION_DRAFT,
+  BUILT_IN_CONFIGURATION_INFO,
+  BUILT_IN_CONFIGURATION_NAME,
+} from '@/domain/seed-configuration';
 import { assertValidDump, planMerge } from '@/domain/merge';
 import {
   EDIT_NOTICE_KIND,
@@ -128,6 +133,45 @@ class Repository implements VariorumRepository {
       dirtySinceExport: true,
     }));
     return next;
+  }
+
+  /** Whether any name record, archived or not, carries the name. */
+  private hasConfiguration(name: string): boolean {
+    return variorumStore
+      .getState()
+      .configurations.some((c) => c.name === name);
+  }
+
+  /** Name record + version 1. Callers run inside the queue and check the name. */
+  private async insertConfiguration(
+    info: NewConfigurationInfo,
+    draft: ConfigurationDraft,
+  ): Promise<ConfigurationVersion> {
+    const configuration: Configuration = {
+      name: info.name,
+      artifactType: info.artifactType,
+      archived: false,
+      ...(info.description !== undefined
+        ? { description: info.description }
+        : {}),
+    };
+    const versionOne: ConfigurationVersion = {
+      name: info.name,
+      version: 1,
+      ...draft,
+    };
+    // The system's ONE multi-store write: name record + version 1,
+    // atomically (DESIGN.md "State Architecture").
+    await putMany(this.requireDb(), [
+      { store: 'configurations', doc: configuration },
+      { store: 'configurationVersions', doc: versionOne },
+    ]);
+    variorumStore.setState((s) => ({
+      configurations: [...s.configurations, configuration],
+      configurationVersions: [...s.configurationVersions, versionOne],
+      dirtySinceExport: true,
+    }));
+    return versionOne;
   }
 
   private async writeConfiguration(
@@ -321,37 +365,10 @@ class Repository implements VariorumRepository {
     draft: ConfigurationDraft,
   ): Promise<ConfigurationVersion> {
     return this.enqueue(async () => {
-      const exists = variorumStore
-        .getState()
-        .configurations.some((c) => c.name === info.name);
-      if (exists) {
+      if (this.hasConfiguration(info.name)) {
         throw new Error(`configuration already exists: ${info.name}`);
       }
-      const configuration: Configuration = {
-        name: info.name,
-        artifactType: info.artifactType,
-        archived: false,
-        ...(info.description !== undefined
-          ? { description: info.description }
-          : {}),
-      };
-      const versionOne: ConfigurationVersion = {
-        name: info.name,
-        version: 1,
-        ...draft,
-      };
-      // The system's ONE multi-store write: name record + version 1,
-      // atomically (DESIGN.md "State Architecture").
-      await putMany(this.requireDb(), [
-        { store: 'configurations', doc: configuration },
-        { store: 'configurationVersions', doc: versionOne },
-      ]);
-      variorumStore.setState((s) => ({
-        configurations: [...s.configurations, configuration],
-        configurationVersions: [...s.configurationVersions, versionOne],
-        dirtySinceExport: true,
-      }));
-      return versionOne;
+      return this.insertConfiguration(info, draft);
     });
   }
 
@@ -415,7 +432,17 @@ class Repository implements VariorumRepository {
   }
 
   ensureBuiltInConfiguration(): Promise<ConfigurationVersion | null> {
-    throw new Error('not implemented: ensureBuiltInConfiguration');
+    // Checked inside the queue: two concurrent calls must not both see
+    // the name absent. An archived record counts as present.
+    return this.enqueue(async () => {
+      if (this.hasConfiguration(BUILT_IN_CONFIGURATION_NAME)) {
+        return null;
+      }
+      return this.insertConfiguration(
+        BUILT_IN_CONFIGURATION_INFO,
+        BUILT_IN_CONFIGURATION_DRAFT,
+      );
+    });
   }
 
   // ---- Danger zone (interface-only) ---------------------------------------

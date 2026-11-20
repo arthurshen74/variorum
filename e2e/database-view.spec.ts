@@ -276,7 +276,7 @@ test('[G2] a confirmed replace downloads the backup first and swaps the database
   ]);
 
   const after = await exportDump(page);
-  expect(after.configurations.map((c) => c.name)).toEqual(['fresh']);
+  expect(after.configurations.map((c) => c.name)).toEqual(['fresh', 'link-ml']);
   expect(after.units.map((u) => u.conversationName)).toEqual(['fresh thread']);
 });
 

@@ -39,7 +39,7 @@ older features' tags.
   src/components/dialogs/database-actions.built-in.test.ts /
   npx playwright test e2e/built-in-configuration.spec.ts
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-11-20)
 
 ### G2 — Setup gate
 - Intent: an absent `variorum.llm` is empty; a document with no endpoint
@@ -163,6 +163,20 @@ Pre-approved at planning (2026-11-20), applied by the G2 run:
   one LM Studio endpoint with no models and writes it" is retired
   (`provider-document.first-run.test.ts` covers what replaced it); "read
   ignores variorum.baseUrl and variorum.apiKey" expects no endpoints.
+
+Approved during the G1 run (2026-11-20). Why, for both: the same
+"alone in the database" assumption A3 and A7 amend, at call sites
+planning missed. Assertions untouched.
+
+- A11 `e2e/management-ui.spec.ts` — the four Edit-flow tests (five call
+  sites) find the `linkml` row with
+  `.filter({ has: page.getByText('linkml', { exact: true }) })` instead
+  of `.filter({ hasText: 'linkml' })`. Playwright's string `hasText` is
+  a case-insensitive substring match, so it also matched the built-in's
+  row through its description "LinkML modeling assistant.".
+- A12 `e2e/models-providers.spec.ts` — "the configuration form's Model
+  field offers the document's handles…" asserts on the versions named
+  `free` rather than on every version: `link-ml.1` is in the dump too.
 
 Abstraction candidates for the implementing runs to record in
 `DESIGN_ABSTRACTION_CANDIDATES.md` (Longshots, two instances each): the

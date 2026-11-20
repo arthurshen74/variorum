@@ -65,7 +65,8 @@ test('[G2] importing your own export changes nothing and reports everything skip
   });
 
   expect(result.after).toEqual(result.before);
-  expect(result.report.skippedIdentical).toBe(2);
+  // link-ml (built-in) + linkml + the unit
+  expect(result.report.skippedIdentical).toBe(3);
   expect(result.report.configurationsAdded).toEqual([]);
   expect(result.report.configurationsFastForwarded).toEqual([]);
   expect(result.report.lineagesRenamed).toEqual([]);
@@ -112,6 +113,7 @@ test('[G2] a merged database survives reload', async ({ page }) => {
   });
 
   expect(after.configurations.map((c) => c.name).sort()).toEqual([
+    'link-ml',
     'linkml',
     'linkml~2',
   ]);

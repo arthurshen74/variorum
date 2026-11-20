@@ -34,9 +34,12 @@ if (container === null) {
 const root = createRoot(container);
 
 // Hydrate-at-boot (DESIGN.md "State Architecture"): the store is the
-// working copy of the database before the first render.
+// working copy of the database before the first render. The built-in
+// configuration exists before the first render too (DESIGN.md
+// "First-Run Setup").
 repository
   .boot()
+  .then(() => repository.ensureBuiltInConfiguration())
   .then(() => {
     root.render(
       <StrictMode>
