@@ -409,7 +409,9 @@ test('[G4] an unbound handle shows the exact error row with no request leaving t
 
     const errorRow = page.getByRole('alert');
     await expect(errorRow).toContainText(UNBOUND_MESSAGE('ghost'));
-    await expect(errorRow.getByRole('button', { name: 'Retry' })).toBeVisible();
+    await expect(
+      errorRow.getByRole('button', { name: 'Retry', exact: true }),
+    ).toBeVisible();
     expect(llm.requests).toHaveLength(0);
 
     const dialog = await openProvidersView(page);
@@ -437,7 +439,7 @@ test('[G4] an unbound handle shows the exact error row with no request leaving t
     ).toHaveCount(0);
     await page.keyboard.press('Escape');
 
-    await page.getByRole('button', { name: 'Retry' }).click();
+    await page.getByRole('button', { name: 'Retry', exact: true }).click();
     await expect(page.getByRole('log')).toContainText('Bound now.');
     expect(llm.requests).toHaveLength(1);
     expect(llm.requests[0]?.model).toBe('ghost');

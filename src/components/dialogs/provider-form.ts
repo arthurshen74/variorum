@@ -19,6 +19,7 @@ import {
   type ProviderDocument,
 } from '@/llm/provider-document';
 import type { EndpointInput, ModelInput } from '@/llm/provider-mutations';
+import { boundHandles } from '@/llm/resolve-model';
 
 export interface EndpointDraft {
   url: string;
@@ -171,11 +172,7 @@ export function referencedUnboundHandles(
     }
   }
 
-  const bound = new Set(
-    document.endpoints.flatMap((endpoint) =>
-      endpoint.models.map((model) => model.handle),
-    ),
-  );
+  const bound = new Set(boundHandles(document));
 
   const referenced = new Set<string>();
   for (const configuration of configurations) {

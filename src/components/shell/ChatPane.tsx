@@ -20,10 +20,11 @@ import {
   PromptInputSubmit,
   PromptInputTextarea,
 } from '@/components/ai-elements/prompt-input';
+import { ChatErrorRow } from '@/components/chat/ChatErrorRow';
 import { ChatMessage } from '@/components/chat/ChatMessage';
 import { EDIT_NOTICE_KIND } from '@/domain/edit-notice';
 import { extractArtifact } from '@/domain/extract';
-import type { Unit } from '@/domain/types';
+import type { ConfigurationVersion, Unit } from '@/domain/types';
 import { VariorumChatTransport } from '@/llm/chat-transport';
 import { completionFromUIMessage, toUIMessages } from '@/llm/mapping';
 import {
@@ -134,7 +135,7 @@ export default function ChatPane({ unitId }: ChatPaneProps) {
           key={unit.id}
           unit={unit}
           artifactType={configuration?.artifactType ?? 'text'}
-          modelName={version?.modelName ?? ''}
+          version={version}
         />
       }
     </aside>
@@ -144,10 +145,11 @@ export default function ChatPane({ unitId }: ChatPaneProps) {
 interface UnitChatProps {
   unit: Unit;
   artifactType: string;
-  modelName: string;
+  version: ConfigurationVersion | undefined;
 }
 
-function UnitChat({ unit, artifactType, modelName }: UnitChatProps) {
+function UnitChat({ unit, artifactType, version }: UnitChatProps) {
+  const modelName = version?.modelName ?? '';
   const transport = useMemo(
     () => new VariorumChatTransport(unit.id),
     [unit.id],
@@ -275,24 +277,14 @@ function UnitChat({ unit, artifactType, modelName }: UnitChatProps) {
             );
           })}
           {status === 'error' ?
-            <div
-              role="alert"
-              className="flex flex-col gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs"
-            >
-              <span className="text-destructive">
-                {error?.message ?? 'The request failed.'}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  sentAt.current = new Date().toISOString();
-                  void regenerate();
-                }}
-                className="w-fit rounded-md border px-2 py-1 font-medium hover:bg-accent"
-              >
-                Retry
-              </button>
-            </div>
+            <ChatErrorRow
+              message={error?.message ?? 'The request failed.'}
+              version={version}
+              onRetry={() => {
+                sentAt.current = new Date().toISOString();
+                void regenerate();
+              }}
+            />
           : null}
           {isStranded ?
             <div className="flex flex-col gap-2 rounded-md border bg-muted/30 p-3 text-xs">

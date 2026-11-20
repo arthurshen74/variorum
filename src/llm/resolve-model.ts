@@ -31,8 +31,9 @@ export class MissingApiKeyError extends Error {
 
 /** Every handle the document binds, in document order. */
 export function boundHandles(document: ProviderDocument): string[] {
-  void document;
-  throw new Error('not implemented: boundHandles');
+  return document.endpoints.flatMap((endpoint) =>
+    endpoint.models.map((model) => model.handle),
+  );
 }
 
 export function resolveModel(

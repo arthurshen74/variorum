@@ -1,10 +1,18 @@
 /**
  * The new-unit dialog (DESIGN.md "Management UI"): conversation name plus
- * a picker over active configurations. Create calls the repository;
- * onCreated lets AppShell select the new unit.
+ * a picker over active configurations. When the chosen configuration
+ * names an unbound handle, a Model picker joins them and Create first
+ * saves the next version with the chosen handle (DESIGN.md "First-Run
+ * Setup", "Choosing a model at use"). onCreated lets AppShell select the
+ * new unit.
  */
 import { useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import {
+  createUnitWithModel,
+  modelChoiceFor,
+} from '@/components/setup/model-choice';
+import { ModelChoicePicker } from '@/components/setup/ModelChoicePicker';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,8 +22,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { readProviderDocumentOrNull } from '@/llm/provider-document';
 import { repository } from '@/persistence/repository';
-import { selectActiveConfigurations } from '@/state/selectors';
+import {
+  selectActiveConfigurations,
+  selectLatestVersion,
+} from '@/state/selectors';
 import { useVariorum } from '@/state/store';
 
 export interface NewUnitDialogProps {
@@ -35,22 +47,43 @@ export default function NewUnitDialog({
   const configurations = useVariorum(useShallow(selectActiveConfigurations));
   const [conversationName, setConversationName] = useState('');
   const [configName, setConfigName] = useState('');
+  const [handle, setHandle] = useState('');
 
   // Empty means untouched: the picker shows the first active configuration
   // and Create uses it, so there is no placeholder option to select past.
   const selected =
     configName === '' ? (configurations[0]?.name ?? '') : configName;
+  const version = useVariorum(selectLatestVersion(selected));
+
+  // Read on every open render, so a model deleted mid-session is seen.
+  const choice =
+    open && version !== undefined ?
+      modelChoiceFor(version, readProviderDocumentOrNull())
+    : null;
+  // Same convention for the Model picker: untouched means the first handle.
+  const chosenHandle =
+    choice === null ? null
+    : choice.handles.includes(handle) ? handle
+    : (choice.handles[0] ?? null);
+  const noModel = choice !== null && chosenHandle === null;
 
   function handleOpenChange(next: boolean) {
     if (!next) {
       setConversationName('');
       setConfigName('');
+      setHandle('');
     }
     onOpenChange(next);
   }
 
   async function create() {
-    const unit = await repository.createUnit(conversationName.trim(), selected);
+    if (version === undefined) return;
+    const unit = await createUnitWithModel(
+      repository,
+      conversationName.trim(),
+      version,
+      chosenHandle,
+    );
     onCreated(unit.id);
     handleOpenChange(false);
   }
@@ -105,6 +138,24 @@ export default function NewUnitDialog({
               ))}
             </select>
           </div>
+          {choice !== null && chosenHandle !== null ?
+            <>
+              <ModelChoicePicker
+                handles={choice.handles}
+                value={chosenHandle}
+                onChange={setHandle}
+              />
+              <p className="text-xs text-muted-foreground">
+                Saves {choice.designator} with model {chosenHandle}
+              </p>
+            </>
+          : null}
+          {noModel ?
+            <p className="text-xs text-muted-foreground">
+              No model is set up on this machine. Add one in Models/Providers,
+              then come back.
+            </p>
+          : null}
         </div>
         <DialogFooter>
           <Button
@@ -114,7 +165,9 @@ export default function NewUnitDialog({
             Cancel
           </Button>
           <Button
-            disabled={conversationName.trim() === '' || selected === ''}
+            disabled={
+              conversationName.trim() === '' || selected === '' || noModel
+            }
             onClick={() => {
               void create();
             }}

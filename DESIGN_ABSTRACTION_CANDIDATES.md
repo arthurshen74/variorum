@@ -16,4 +16,11 @@ Per CLAUDE.md "DRY (and when not)": 2 similar instances = Longshot,
 - **Load the provider document or its error** — `loadDocument` in
   `ProvidersView` and in `SetupGate`: `readProviderDocument` with
   `ProviderDocumentError` caught. The view keeps the message to show; the
-  gate only needs to know the document is malformed.
+  gate only needs to know the document is malformed. The null-on-malformed
+  shape now exists as `readProviderDocumentOrNull`
+  (`src/llm/provider-document.ts`, used by `NewUnitDialog` and
+  `ChatErrorRow`); the gate's copy is identical to it and can adopt it.
+- **Untouched picker means the first option** — `chosenHandle` in
+  `NewUnitDialog` and `offerFor` in `ChatErrorRow`: a picked handle kept
+  only while the offered list still holds it, else the first. The
+  dialog's configuration picker follows the same convention inline.

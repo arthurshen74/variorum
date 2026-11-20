@@ -74,7 +74,9 @@ older features' tags.
   `src/components/dialogs/ConfigurationsDialog.tsx` and
   `src/components/dialogs/provider-form.ts` (their private bound-handle
   computations adopt `boundHandles`; their existing tests stay
-  untouched and green).
+  untouched and green), `src/llm/provider-document.ts`
+  (`readProviderDocumentOrNull` only; added at G3 plan approval,
+  2026-11-20), and `DESIGN_ABSTRACTION_CANDIDATES.md`.
 - Tests: `src/llm/bound-handles.test.ts`,
   `src/components/setup/model-choice.test.ts`,
   `e2e/model-choice.spec.ts` — filters:
@@ -82,7 +84,7 @@ older features' tags.
   src/components/setup/model-choice.test.ts /
   npx playwright test e2e/model-choice.spec.ts
 - Depends on: none
-- Status: RED
+- Status: GREEN (2026-11-20)
 
 ## Order
 
@@ -203,3 +205,15 @@ wrong. Assertions untouched.
   unbound; the test still covers the "Add to endpoint" prefill and the
   bound handle leaving the hint list, which `e2e/model-choice.spec.ts`
   does not.
+
+Approved during the G3 run (2026-11-20). No spec delta: DESIGN.md
+already describes the button; only the test's locator was wrong.
+Assertions untouched.
+
+- A15 `e2e/models-providers.spec.ts` — "an unbound handle shows the exact
+  error row…" finds Retry (both call sites) with
+  `{ name: 'Retry', exact: true }` instead of `{ name: 'Retry' }`. Why:
+  the row now also shows "Save notes.2 and retry" for the unbound
+  `ghost` (DESIGN.md "First-Run Setup", "Choosing a model at use"), and
+  Playwright's string `name` is a case-insensitive substring match, so
+  the locator matched both buttons.

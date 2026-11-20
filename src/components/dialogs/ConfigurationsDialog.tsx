@@ -17,6 +17,7 @@ import {
 import { Slider } from '@/components/ui/slider';
 import type { Configuration } from '@/domain/types';
 import { readProviderDocument } from '@/llm/provider-document';
+import { boundHandles } from '@/llm/resolve-model';
 import { repository } from '@/persistence/repository';
 import { selectConfiguration, selectLatestVersion } from '@/state/selectors';
 import { useVariorum, variorumStore } from '@/state/store';
@@ -81,11 +82,9 @@ const ROW_CLASS = 'flex items-center gap-2 rounded-md border px-2 py-1.5';
  * suggestions, not the form: the field takes free text either way, and
  * the Models/Providers view is where that parse error belongs.
  */
-function boundHandles(): string[] {
+function offeredHandles(): string[] {
   try {
-    return readProviderDocument().endpoints.flatMap((endpoint) =>
-      endpoint.models.map((model) => model.handle),
-    );
+    return boundHandles(readProviderDocument());
   } catch {
     return [];
   }
@@ -115,7 +114,7 @@ export default function ConfigurationsDialog({
   }
 
   function showAdd() {
-    setHandles(boundHandles());
+    setHandles(offeredHandles());
     setValues(BLANK_FORM);
     setErrors({});
     setAlert(null);
@@ -123,7 +122,7 @@ export default function ConfigurationsDialog({
   }
 
   function showEdit(configuration: Configuration) {
-    setHandles(boundHandles());
+    setHandles(offeredHandles());
     const version = selectLatestVersion(configuration.name)(
       variorumStore.getState(),
     );

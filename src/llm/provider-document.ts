@@ -204,6 +204,19 @@ export function readProviderDocument(): ProviderDocument {
   return document;
 }
 
+/**
+ * The document, or null when it is malformed: for callers that only need
+ * to know it cannot be trusted, not why.
+ */
+export function readProviderDocumentOrNull(): ProviderDocument | null {
+  try {
+    return readProviderDocument();
+  } catch (error) {
+    if (error instanceof ProviderDocumentError) return null;
+    throw error;
+  }
+}
+
 export function writeProviderDocument(document: ProviderDocument): void {
   localStorage.setItem(PROVIDER_DOCUMENT_KEY, JSON.stringify(document));
 }

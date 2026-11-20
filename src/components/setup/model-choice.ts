@@ -11,6 +11,7 @@ import type {
   Unit,
 } from '@/domain/types';
 import type { ProviderDocument } from '@/llm/provider-document';
+import { boundHandles } from '@/llm/resolve-model';
 
 export interface ModelChoice {
   /** The version the Save will mint, as `name.N`. */
@@ -37,9 +38,9 @@ export function modelChoiceFor(
   version: ConfigurationVersion,
   document: ProviderDocument | null,
 ): ModelChoice | null {
-  void version;
-  void document;
-  throw new Error('not implemented: modelChoiceFor');
+  const handles = document === null ? [] : boundHandles(document);
+  if (handles.includes(version.modelName)) return null;
+  return { designator: `${version.name}.${version.version + 1}`, handles };
 }
 
 /** The version's recipe with only the model handle replaced. */
@@ -47,9 +48,9 @@ export function rebindDraft(
   version: ConfigurationVersion,
   handle: string,
 ): ConfigurationDraft {
-  void version;
-  void handle;
-  throw new Error('not implemented: rebindDraft');
+  // Rest, not a field list: a recipe field added later carries over too.
+  const { name, version: number, ...recipe } = version;
+  return { ...recipe, modelName: handle };
 }
 
 /**
@@ -57,15 +58,17 @@ export function rebindDraft(
  * version and only then creates the unit; a null handle means the
  * configuration is already bound and only the unit is created.
  */
-export function createUnitWithModel(
+export async function createUnitWithModel(
   ports: ModelChoicePorts,
   conversationName: string,
   version: ConfigurationVersion,
   handle: string | null,
 ): Promise<Unit> {
-  void ports;
-  void conversationName;
-  void version;
-  void handle;
-  throw new Error('not implemented: createUnitWithModel');
+  if (handle !== null) {
+    await ports.saveConfigurationVersion(
+      version.name,
+      rebindDraft(version, handle),
+    );
+  }
+  return ports.createUnit(conversationName, version.name);
 }
