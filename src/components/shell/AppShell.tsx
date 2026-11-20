@@ -11,6 +11,7 @@ import ArtifactPane from '@/components/artifact/ArtifactPane';
 import ArchiveConfirm from '@/components/dialogs/ArchiveConfirm';
 import ConfigurationsDialog from '@/components/dialogs/ConfigurationsDialog';
 import NewUnitDialog from '@/components/dialogs/NewUnitDialog';
+import SetupGate from '@/components/setup/SetupGate';
 import type { Unit } from '@/domain/types';
 import ChatPane from './ChatPane';
 import Sidebar from './Sidebar';
@@ -87,6 +88,7 @@ export default function AppShell() {
           setActiveUnitId((current) => (current === unitId ? null : current));
         }}
       />
+      <SetupGate />
     </div>
   );
 }

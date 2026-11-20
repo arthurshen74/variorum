@@ -275,6 +275,10 @@ test('[G2] a confirmed replace downloads the backup first and swaps the database
     'seeded thread',
   ]);
 
+  // The built-in check follows the replace; its outcome line marks both done.
+  await expect(dialog.getByRole('status')).toContainText(
+    'Database replaced from the chosen file.',
+  );
   const after = await exportDump(page);
   expect(after.configurations.map((c) => c.name)).toEqual(['fresh', 'link-ml']);
   expect(after.units.map((u) => u.conversationName)).toEqual(['fresh thread']);

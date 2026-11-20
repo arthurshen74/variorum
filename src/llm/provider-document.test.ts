@@ -262,27 +262,6 @@ describe('[G2] readProviderDocument / writeProviderDocument', () => {
     expect(readProviderDocument()).toEqual(FULL);
   });
 
-  it('read on an absent key seeds one LM Studio endpoint with no models and writes it', () => {
-    const document = readProviderDocument();
-    expect(document.endpoints).toHaveLength(1);
-    const seed = document.endpoints[0];
-    expect(seed).toMatchObject({
-      url: DEFAULT_ENDPOINT_URL,
-      api: 'openai-compatible',
-      authRequired: false,
-      models: [],
-    });
-    expect(seed).not.toHaveProperty('apiKey');
-    expect(typeof seed?.id).toBe('string');
-    expect(seed?.id.trim()).not.toBe('');
-
-    const raw = storage.get(PROVIDER_DOCUMENT_KEY);
-    expect(raw).toBeDefined();
-    expect(JSON.parse(raw ?? '')).toEqual(document);
-    // A second read returns the written document, not a fresh seed.
-    expect(readProviderDocument()).toEqual(document);
-  });
-
   it('read on an absent key with legacy records folds them and removes the legacy keys', () => {
     storage.set(
       'variorum.model.claude-mock',
@@ -356,8 +335,7 @@ describe('[G2] readProviderDocument / writeProviderDocument', () => {
     storage.set('variorum.baseUrl', 'http://legacy:9/v1');
     storage.set('variorum.apiKey', 'legacy-key');
     const document = readProviderDocument();
-    expect(document.endpoints).toHaveLength(1);
-    expect(document.endpoints[0]?.url).toBe(DEFAULT_ENDPOINT_URL);
+    expect(document.endpoints).toEqual([]);
     expect(JSON.stringify(document)).not.toContain('legacy');
     expect(storage.get('variorum.baseUrl')).toBe('http://legacy:9/v1');
   });

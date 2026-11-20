@@ -32,7 +32,8 @@ export interface ModelFormProps {
   initialEndpointId: string;
   onSubmit: (input: ModelInput, endpointId: string) => void;
   onRefuse: (message: string) => void;
-  onCancel: () => void;
+  /** Absent: the form renders no Cancel. */
+  onCancel?: () => void;
 }
 
 function endpointById(endpoints: Endpoint[], id: string): Endpoint {
@@ -170,9 +171,11 @@ export default function ModelForm({
       )}
 
       <div className="flex justify-end gap-2">
-        <Button size="sm" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
+        {onCancel !== undefined && (
+          <Button size="sm" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
         <Button size="sm" onClick={save}>
           Save
         </Button>

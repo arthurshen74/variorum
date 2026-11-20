@@ -140,30 +140,6 @@ async function chooseOption(dialog: Locator, combobox: string, option: string) {
   await dialog.page().getByRole('option', { name: option }).click();
 }
 
-test('[G4] Models/Providers opens from the Configurations dialog and shows the seeded LM Studio endpoint with no models', async ({
-  page,
-}) => {
-  await openApp(page);
-  const dialog = await openProvidersView(page);
-  const seed = endpointGroup(dialog, {
-    url: DEFAULT_URL,
-    api: 'openai-compatible',
-  });
-  await expect(seed).toBeVisible();
-  await expect(seed.getByRole('listitem')).toHaveCount(0);
-
-  const stored = JSON.parse((await storedDocument(page)) ?? 'null') as {
-    endpoints: Endpoint[];
-  } | null;
-  expect(stored?.endpoints).toHaveLength(1);
-  expect(stored?.endpoints[0]).toMatchObject({
-    url: DEFAULT_URL,
-    api: 'openai-compatible',
-    authRequired: false,
-    models: [],
-  });
-});
-
 test('[G4] adding an endpoint and a model beneath it persists across reload; the tree shows <url> (label) and the handle', async ({
   page,
 }) => {
@@ -422,7 +398,8 @@ test('[G4] an unbound handle shows the exact error row with no request leaving t
       url: llm.url,
       api: 'openai-compatible',
       authRequired: false,
-      models: [],
+      // A model anywhere keeps the setup gate closed; ghost stays unbound.
+      models: [{ modelName: 'bystander', handle: 'bystander' }],
     };
     await seedDocument(page, [endpoint]);
     await openApp(page);
@@ -469,64 +446,68 @@ test('[G4] an unbound handle shows the exact error row with no request leaving t
   }
 });
 
-test('[G4] legacy variorum.model.* records are folded on first open and the legacy keys are gone', async ({
-  page,
-}) => {
-  await page.addInitScript(() => {
-    localStorage.setItem(
-      'variorum.model.claude-mock',
-      JSON.stringify({
-        api: 'anthropic-messages',
-        endpointUrl: 'http://127.0.0.1:8899/v1',
-        apiKey: 'sk-ant-test',
-        maxOutputTokens: 1234,
-      }),
-    );
-    localStorage.setItem(
-      'variorum.model.qwen',
-      JSON.stringify({
-        api: 'openai-compatible',
-        endpointUrl: 'http://localhost:1234/v1',
-      }),
-    );
-  });
-  await openApp(page);
-  const dialog = await openProvidersView(page);
+test.describe('with no stored document', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
 
-  const anthropic = {
-    url: 'http://127.0.0.1:8899/v1',
-    api: 'anthropic-messages',
-  };
-  await expect(
-    modelItem(endpointGroup(dialog, anthropic), 'claude-mock'),
-  ).toBeVisible();
-  await expect(
-    modelItem(
-      endpointGroup(dialog, { url: DEFAULT_URL, api: 'openai-compatible' }),
-      'qwen',
-    ),
-  ).toBeVisible();
+  test('[G4] legacy variorum.model.* records are folded on first open and the legacy keys are gone', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'variorum.model.claude-mock',
+        JSON.stringify({
+          api: 'anthropic-messages',
+          endpointUrl: 'http://127.0.0.1:8899/v1',
+          apiKey: 'sk-ant-test',
+          maxOutputTokens: 1234,
+        }),
+      );
+      localStorage.setItem(
+        'variorum.model.qwen',
+        JSON.stringify({
+          api: 'openai-compatible',
+          endpointUrl: 'http://localhost:1234/v1',
+        }),
+      );
+    });
+    await openApp(page);
+    const dialog = await openProvidersView(page);
 
-  const legacy = await page.evaluate(() => [
-    localStorage.getItem('variorum.model.claude-mock'),
-    localStorage.getItem('variorum.model.qwen'),
-  ]);
-  expect(legacy).toEqual([null, null]);
-  const stored = JSON.parse((await storedDocument(page)) ?? 'null') as {
-    endpoints: Endpoint[];
-  };
-  expect(
-    stored.endpoints.find((e) => e.api === 'anthropic-messages'),
-  ).toMatchObject({
-    authRequired: true,
-    apiKey: 'sk-ant-test',
-    models: [
-      {
-        modelName: 'claude-mock',
-        handle: 'claude-mock',
-        maxOutputTokens: 1234,
-      },
-    ],
+    const anthropic = {
+      url: 'http://127.0.0.1:8899/v1',
+      api: 'anthropic-messages',
+    };
+    await expect(
+      modelItem(endpointGroup(dialog, anthropic), 'claude-mock'),
+    ).toBeVisible();
+    await expect(
+      modelItem(
+        endpointGroup(dialog, { url: DEFAULT_URL, api: 'openai-compatible' }),
+        'qwen',
+      ),
+    ).toBeVisible();
+
+    const legacy = await page.evaluate(() => [
+      localStorage.getItem('variorum.model.claude-mock'),
+      localStorage.getItem('variorum.model.qwen'),
+    ]);
+    expect(legacy).toEqual([null, null]);
+    const stored = JSON.parse((await storedDocument(page)) ?? 'null') as {
+      endpoints: Endpoint[];
+    };
+    expect(
+      stored.endpoints.find((e) => e.api === 'anthropic-messages'),
+    ).toMatchObject({
+      authRequired: true,
+      apiKey: 'sk-ant-test',
+      models: [
+        {
+          modelName: 'claude-mock',
+          handle: 'claude-mock',
+          maxOutputTokens: 1234,
+        },
+      ],
+    });
   });
 });
 

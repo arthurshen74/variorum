@@ -8,3 +8,12 @@ Per CLAUDE.md "DRY (and when not)": 2 similar instances = Longshot,
 - **Transcript chip** — `ArtifactChip` and `EditNoticeChip`
   (`src/components/chat/`): same visual shell (bordered muted pill, icon,
   one line of text), different icon and label logic.
+- **Replace confirmation UI** — `DatabaseView` (`src/components/dialogs/`)
+  and `SetupGate` (`src/components/setup/`): the same `DatabasePorts`
+  object over the repository and file-io, the pick → confirm panel →
+  `runReplace` sequence, and the consequence wording beside "Cancel" /
+  "Confirm replace".
+- **Load the provider document or its error** — `loadDocument` in
+  `ProvidersView` and in `SetupGate`: `readProviderDocument` with
+  `ProviderDocumentError` caught. The view keeps the message to show; the
+  gate only needs to know the document is malformed.

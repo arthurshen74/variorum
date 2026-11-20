@@ -3,11 +3,11 @@
  * device state in localStorage under `variorum.llm` — a tree of
  * endpoints, each holding the models it serves. Never in the Zustand
  * store, never in an export. This module owns the shape, the boundary
- * validator, and the read/write/seed path; mutations live in
+ * validator, and the read/write path; mutations live in
  * provider-mutations.ts, the legacy fold in provider-migration.ts.
  */
 import type { ApiProtocol } from './protocols/adapter';
-import { DEFAULT_ENDPOINT_PROTOCOL, isApiProtocol } from './protocols/registry';
+import { isApiProtocol } from './protocols/registry';
 import {
   foldLegacyBindings,
   readLegacyBindings,
@@ -16,7 +16,7 @@ import {
 
 export const PROVIDER_DOCUMENT_KEY = 'variorum.llm';
 
-// LM Studio's default; the seed endpoint on first run.
+// LM Studio's default; the setup gate's Add Endpoint prefill.
 export const DEFAULT_ENDPOINT_URL = 'http://localhost:1234/v1';
 
 export interface ModelRow {
@@ -185,24 +185,9 @@ export function parseProviderDocument(raw: string): ProviderDocument {
   return { endpoints };
 }
 
-/** The first-run document: one LM Studio endpoint, no models. */
-export function seedDocument(id: string): ProviderDocument {
-  return {
-    endpoints: [
-      {
-        id,
-        url: DEFAULT_ENDPOINT_URL,
-        api: DEFAULT_ENDPOINT_PROTOCOL,
-        authRequired: false,
-        models: [],
-      },
-    ],
-  };
-}
-
 /**
- * The stored document. Absent: seed it, fold any legacy records in, write
- * it, remove the legacy keys. Malformed: throws ProviderDocumentError and
+ * The stored document. Absent: start it empty, fold any legacy records
+ * in, write it, remove the legacy keys. Malformed: throws ProviderDocumentError and
  * leaves the stored value untouched.
  */
 export function readProviderDocument(): ProviderDocument {
@@ -211,7 +196,7 @@ export function readProviderDocument(): ProviderDocument {
 
   const document = foldLegacyBindings(
     readLegacyBindings(),
-    seedDocument(crypto.randomUUID()),
+    { endpoints: [] },
     () => crypto.randomUUID(),
   );
   writeProviderDocument(document);

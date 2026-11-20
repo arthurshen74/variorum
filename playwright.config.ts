@@ -14,19 +14,55 @@ import { defineConfig, devices } from '@playwright/test';
  */
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
 
+const BASE_URL = 'http://localhost:5173';
+
+/**
+ * Every spec opens past the setup gate (DESIGN.md "First-Run Setup"): a
+ * Models/Providers document with one endpoint and one model, under names
+ * no spec uses. A spec that seeds its own document overwrites it; one that
+ * needs a fresh machine sets an empty storageState.
+ */
+const DEFAULT_PROVIDER_DOCUMENT = {
+  endpoints: [
+    {
+      id: 'e2e-default-endpoint',
+      url: 'http://127.0.0.1:9/v1',
+      api: 'openai-compatible',
+      authRequired: false,
+      models: [
+        { modelName: 'e2e-default-model', handle: 'e2e-default-model' },
+      ],
+    },
+  ],
+};
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
   reporter: 'line',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: BASE_URL,
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: BASE_URL,
+          localStorage: [
+            {
+              name: 'variorum.llm',
+              value: JSON.stringify(DEFAULT_PROVIDER_DOCUMENT),
+            },
+          ],
+        },
+      ],
+    },
     trace: 'on-first-retry',
     ...(executablePath ? { launchOptions: { executablePath } } : {}),
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:5173',
+    url: BASE_URL,
     reuseExistingServer: !process.env.CI,
   },
 });

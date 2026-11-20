@@ -26,7 +26,8 @@ export interface EndpointFormProps {
   initial: EndpointDraft;
   onSubmit: (input: EndpointInput) => void;
   onRefuse: (message: string) => void;
-  onCancel: () => void;
+  /** Absent: the form renders no Cancel. */
+  onCancel?: () => void;
 }
 
 export default function EndpointForm({
@@ -117,9 +118,11 @@ export default function EndpointForm({
       )}
 
       <div className="flex justify-end gap-2">
-        <Button size="sm" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
+        {onCancel !== undefined && (
+          <Button size="sm" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
         <Button size="sm" onClick={save}>
           Save
         </Button>

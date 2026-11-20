@@ -60,7 +60,7 @@ older features' tags.
   npx playwright test e2e/first-run.spec.ts
 - Depends on: none. Run after G1: both amend
   `e2e/models-providers.spec.ts` (A7, A9).
-- Status: RED
+- Status: GREEN (2026-11-20)
 
 ### G3 — Model choice at use
 - Intent: a configuration naming an unbound handle gets a model picker in
@@ -182,3 +182,24 @@ Abstraction candidates for the implementing runs to record in
 `DESIGN_ABSTRACTION_CANDIDATES.md` (Longshots, two instances each): the
 replace confirmation UI (Database view, setup gate) and the "load the
 document or show its error" helper (Models/Providers view, setup gate).
+
+Approved during the G2 run (2026-11-20). No spec delta for either:
+DESIGN.md already describes the behavior; only the tests' setup was
+wrong. Assertions untouched.
+
+- A13 `e2e/database-view.spec.ts` — "a confirmed replace downloads the
+  backup first and swaps the database" waits for the view's "Database
+  replaced from the chosen file." status before exporting. Why: A6 (G1)
+  added `link-ml` to the post-replace name list, but the export raced the
+  `ensureBuiltInConfiguration` call `runReplace` makes after the replace
+  resolves — the backup download fires mid-replace, so the test's export
+  could queue ahead of the check. Failed about 7 runs in 10 at the G2
+  intake.
+- A14 `e2e/models-providers.spec.ts` — "an unbound handle shows the exact
+  error row…" seeds its endpoint with one bystander model
+  (`{ modelName: 'bystander', handle: 'bystander' }`) instead of none.
+  Why: an endpoint with no models anywhere is the state the setup gate
+  blocks at load, so the test never reached the shell. `ghost` stays
+  unbound; the test still covers the "Add to endpoint" prefill and the
+  bound handle leaving the hint list, which `e2e/model-choice.spec.ts`
+  does not.
