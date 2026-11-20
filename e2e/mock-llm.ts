@@ -86,9 +86,9 @@ export class MockLlm {
         this.requests.push(JSON.parse(raw) as Record<string, unknown>);
         this.headers.push(req.headers);
         const scripted =
-          this.script.length > 1
-            ? (this.script.shift() as ScriptedResponse)
-            : (this.script[0] ?? {});
+          this.script.length > 1 ?
+            (this.script.shift() as ScriptedResponse)
+          : (this.script[0] ?? {});
         void this.play(res, scripted);
       });
     });

@@ -1,7 +1,6 @@
+import './index.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import './index.css';
-import App from './App';
 import {
   deliverBackup,
   deliverExport,
@@ -9,6 +8,7 @@ import {
 } from '@/components/dialogs/file-io';
 import { repository } from '@/persistence/repository';
 import { initTheme } from '@/state/theme';
+import App from './App';
 
 initTheme();
 

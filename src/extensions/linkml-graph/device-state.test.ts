@@ -3,11 +3,10 @@
  * localStorage round-trip, boundary defaults, and the exact key.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import {
+  type GraphDeviceState,
   loadDeviceState,
   saveDeviceState,
-  type GraphDeviceState,
 } from './device-state';
 
 let store: Map<string, string>;

@@ -2,8 +2,7 @@
  * A LinkML enum as a React Flow node (DESIGN.md "LinkML Graph Viewer"):
  * a name header over its permissible values.
  */
-import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
-
+import { Handle, type Node, type NodeProps, Position } from '@xyflow/react';
 import type { EnumNodeData } from './flow-graph';
 
 export type EnumFlowNode = Node<EnumNodeData>;

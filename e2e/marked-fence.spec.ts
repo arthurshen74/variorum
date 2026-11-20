@@ -4,12 +4,14 @@
  * fence plus an unmarked example fence lifts the marked one — the
  * schema-then-example response that broke last-fence-wins.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { MockLlm } from './mock-llm.ts';
 import { seedModelEndpoint } from './model-endpoint.ts';
 
 interface Dump {
-  units: { artifacts: { version: number; source: string; content: string }[] }[];
+  units: {
+    artifacts: { version: number; source: string; content: string }[];
+  }[];
 }
 
 interface DevRepository {

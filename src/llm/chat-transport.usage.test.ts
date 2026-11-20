@@ -5,7 +5,6 @@
  * on the finish chunk — tagged with the modelName of the version that
  * built the request. Filter by file — older manifests reuse the [G2] tag.
  */
-import { beforeEach, describe, expect, it } from 'vitest';
 import type {
   LanguageModelUsage,
   TextStreamPart,
@@ -13,16 +12,17 @@ import type {
   UIMessage,
   UIMessageChunk,
 } from 'ai';
+import { beforeEach, describe, expect, it } from 'vitest';
+import type { ConfigurationVersion } from '@/domain/types';
+import { variorumStore } from '@/state/store';
 import {
   FINISH_REASON_LENGTH,
+  finishUsageMetadata,
   TRUNCATED_RESPONSE_MESSAGE,
   VariorumChatTransport,
-  finishUsageMetadata,
 } from './chat-transport';
-import { PROVIDER_DOCUMENT_KEY } from './provider-document';
 import { installLocalStorageStub } from './local-storage-stub';
-import { variorumStore } from '@/state/store';
-import type { ConfigurationVersion } from '@/domain/types';
+import { PROVIDER_DOCUMENT_KEY } from './provider-document';
 
 const storage = installLocalStorageStub();
 
@@ -57,9 +57,7 @@ const VERSION_ONE: ConfigurationVersion = {
 function seedStore(versions: ConfigurationVersion[]): void {
   variorumStore.setState({
     hydrated: true,
-    configurations: [
-      { name: 'linkml', artifactType: 'yaml', archived: false },
-    ],
+    configurations: [{ name: 'linkml', artifactType: 'yaml', archived: false }],
     configurationVersions: versions,
     units: [
       {

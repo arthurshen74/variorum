@@ -3,8 +3,7 @@
  * win; unplaced nodes get laid out; saved = {} is the auto-arrange path.
  */
 import { describe, expect, it } from 'vitest';
-
-import { layoutGraph, type MeasuredNode, type LayoutEdge } from './layout';
+import { type LayoutEdge, layoutGraph, type MeasuredNode } from './layout';
 
 const nodes: MeasuredNode[] = [
   { id: 'A', width: 200, height: 100 },

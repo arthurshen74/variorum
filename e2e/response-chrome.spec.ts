@@ -18,7 +18,7 @@
  * absolutely positioned and adds no scroll height, so a block at the
  * very bottom of the conversation scroller would have its menu clipped.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { MockLlm } from './mock-llm.ts';
 import { seedModelEndpoint } from './model-endpoint.ts';
 
@@ -168,7 +168,7 @@ test('[G1] tables render no download button', async ({ page }) => {
   await seedUnit(page);
   await respondAndSend(page, `${TABLE}${TRAILING}`);
   await expect(page.locator('[data-streamdown="table-wrapper"]')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Download table' })).toHaveCount(
-    0,
-  );
+  await expect(
+    page.getByRole('button', { name: 'Download table' }),
+  ).toHaveCount(0);
 });

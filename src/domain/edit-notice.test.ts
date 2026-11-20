@@ -11,7 +11,13 @@ import type { Artifact, Message, Unit } from './types';
 const T = '2026-08-03T10:00:00.000Z';
 
 function revision(over: Partial<Artifact>): Artifact {
-  return { version: 1, savedAt: T, source: 'manual', content: 'x: 1\n', ...over };
+  return {
+    version: 1,
+    savedAt: T,
+    source: 'manual',
+    content: 'x: 1\n',
+    ...over,
+  };
 }
 
 function chat(content: string): Message {
@@ -56,7 +62,12 @@ describe('[G1] pendingEditNotice', () => {
       [chat('make it')],
       [
         revision({ version: 1 }),
-        revision({ version: 2, source: 'llm', messageIndex: 0, content: 'z\n' }),
+        revision({
+          version: 2,
+          source: 'llm',
+          messageIndex: 0,
+          content: 'z\n',
+        }),
       ],
     );
     expect(pendingEditNotice(subject)).toBeNull();

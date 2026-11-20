@@ -219,8 +219,8 @@ function optionalString(
   key: string,
   path: string,
 ): string | undefined {
-  return record[key] === undefined
-    ? undefined
+  return record[key] === undefined ?
+      undefined
     : requiredString(record, key, path);
 }
 
@@ -237,8 +237,8 @@ function optionalNumber(
   key: string,
   path: string,
 ): number | undefined {
-  return record[key] === undefined
-    ? undefined
+  return record[key] === undefined ?
+      undefined
     : requiredNumber(record, key, path);
 }
 
@@ -255,8 +255,8 @@ function optionalInteger(
   key: string,
   path: string,
 ): number | undefined {
-  return record[key] === undefined
-    ? undefined
+  return record[key] === undefined ?
+      undefined
     : requiredInteger(record, key, path);
 }
 
@@ -287,7 +287,7 @@ function optionalEnum<T extends string>(
   allowed: readonly T[],
   path: string,
 ): T | undefined {
-  return record[key] === undefined
-    ? undefined
+  return record[key] === undefined ?
+      undefined
     : requiredEnum(record, key, allowed, path);
 }

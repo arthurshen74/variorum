@@ -51,9 +51,9 @@ describe('[G2] readProviderDocument on first run', () => {
       api: 'anthropic-messages',
       models: [{ modelName: 'claude-mock', handle: 'claude-mock' }],
     });
-    expect(
-      document.endpoints.some((e) => e.url === DEFAULT_ENDPOINT_URL),
-    ).toBe(false);
+    expect(document.endpoints.some((e) => e.url === DEFAULT_ENDPOINT_URL)).toBe(
+      false,
+    );
     expect(storage.has('variorum.model.claude-mock')).toBe(false);
   });
 

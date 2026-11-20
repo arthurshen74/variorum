@@ -6,7 +6,7 @@
  * import-merge.spec.ts pattern); locators define the accessibility
  * contract the implementation must meet.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 interface Dump {
   configurations: {
@@ -281,9 +281,7 @@ test('[G2] creating a unit from the New unit dialog adds it to the sidebar and l
   await expect(
     page.getByRole('listitem').filter({ hasText: 'first thread' }),
   ).toBeVisible();
-  await expect(
-    page.getByText('Select a unit from the sidebar'),
-  ).toBeHidden();
+  await expect(page.getByText('Select a unit from the sidebar')).toBeHidden();
 });
 
 test('[G2] archiving a unit asks for confirmation, removes it from the list, and clears the panes if it was the loaded one', async ({
@@ -298,9 +296,7 @@ test('[G2] archiving a unit asks for confirmation, removes it from the list, and
 
   const row = page.getByRole('listitem').filter({ hasText: 'doomed thread' });
   await row.getByRole('button', { name: 'doomed thread' }).click();
-  await expect(
-    page.getByText('Select a unit from the sidebar'),
-  ).toBeHidden();
+  await expect(page.getByText('Select a unit from the sidebar')).toBeHidden();
 
   await row.getByRole('button', { name: 'Archive' }).click();
   const confirm = page.getByRole('dialog');
@@ -309,9 +305,7 @@ test('[G2] archiving a unit asks for confirmation, removes it from the list, and
   await confirm.getByRole('button', { name: 'Archive' }).click();
 
   await expect(row).toBeHidden();
-  await expect(
-    page.getByText('Select a unit from the sidebar'),
-  ).toBeVisible();
+  await expect(page.getByText('Select a unit from the sidebar')).toBeVisible();
   const dump = await exportDump(page);
   expect(dump.units).toHaveLength(1);
   expect(dump.units[0]?.archived).toBe(true);

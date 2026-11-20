@@ -64,9 +64,9 @@ export class MockAnthropic {
         this.headers.push(req.headers);
         this.paths.push(req.url ?? '');
         const scripted =
-          this.script.length > 1
-            ? (this.script.shift() as AnthropicScript)
-            : (this.script[0] ?? {});
+          this.script.length > 1 ?
+            (this.script.shift() as AnthropicScript)
+          : (this.script[0] ?? {});
         this.play(res, scripted);
       });
     });

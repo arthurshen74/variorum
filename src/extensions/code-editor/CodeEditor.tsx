@@ -4,10 +4,10 @@
  * no other components. Props in, onChange out.
  */
 import { useEffect, useRef } from 'react';
-import { EditorView, basicSetup } from 'codemirror';
 import { yaml } from '@codemirror/lang-yaml';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
+import { basicSetup, EditorView } from 'codemirror';
 import type { EditorProps } from '../extension';
 
 // Editor chrome from the shadcn tokens (DESIGN.md "Theming") — the CSS
@@ -65,9 +65,9 @@ export default function CodeEditor({
       return;
     }
     const languages =
-      context.artifactType === 'yaml' || context.artifactType === 'linkml'
-        ? [yaml()]
-        : []; // more languages arrive with more artifact types
+      context.artifactType === 'yaml' || context.artifactType === 'linkml' ?
+        [yaml()]
+      : []; // more languages arrive with more artifact types
     const view = new EditorView({
       doc: initialContentRef.current,
       parent: host,
@@ -106,5 +106,10 @@ export default function CodeEditor({
     }
   }, [content]);
 
-  return <div ref={hostRef} className="h-full min-h-0 overflow-auto text-sm" />;
+  return (
+    <div
+      ref={hostRef}
+      className="h-full min-h-0 overflow-auto text-sm"
+    />
+  );
 }

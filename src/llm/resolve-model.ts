@@ -46,9 +46,8 @@ export function resolveModel(
     if (model === undefined) continue;
 
     // A key stored under an earlier authRequired=true is ignored, not sent.
-    const apiKey = endpoint.authRequired
-      ? (model.apiKey ?? endpoint.apiKey)
-      : undefined;
+    const apiKey =
+      endpoint.authRequired ? (model.apiKey ?? endpoint.apiKey) : undefined;
     if (endpoint.authRequired && apiKey === undefined) {
       throw new MissingApiKeyError(handle, endpoint.url);
     }
@@ -58,9 +57,9 @@ export function resolveModel(
       url: endpoint.url,
       modelId: model.modelName,
       ...(apiKey !== undefined ? { apiKey } : {}),
-      ...(model.maxOutputTokens !== undefined
-        ? { maxOutputTokens: model.maxOutputTokens }
-        : {}),
+      ...(model.maxOutputTokens !== undefined ?
+        { maxOutputTokens: model.maxOutputTokens }
+      : {}),
     };
   }
   throw new UnboundModelError(handle);

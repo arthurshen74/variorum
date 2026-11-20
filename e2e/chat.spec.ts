@@ -10,7 +10,7 @@
  * block's trigger is a button named "Reasoning" carrying aria-expanded;
  * request failures surface an `alert` role with a "Retry" button.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { MockLlm } from './mock-llm.ts';
 import { seedModelEndpoint } from './model-endpoint.ts';
 
@@ -58,17 +58,14 @@ test.afterEach(async () => {
 });
 
 async function seedUnit(page: Page, conversationName = 'thread') {
-  await page.evaluate(
-    async (name) => {
-      const { repository } = (window as unknown as DevWindow).variorum;
-      await repository.createConfiguration(
-        { name: 'linkml', artifactType: 'yaml' },
-        { modelName: 'mock-model', systemPrompt: 'You produce YAML.' },
-      );
-      await repository.createUnit(name, 'linkml');
-    },
-    conversationName,
-  );
+  await page.evaluate(async (name) => {
+    const { repository } = (window as unknown as DevWindow).variorum;
+    await repository.createConfiguration(
+      { name: 'linkml', artifactType: 'yaml' },
+      { modelName: 'mock-model', systemPrompt: 'You produce YAML.' },
+    );
+    await repository.createUnit(name, 'linkml');
+  }, conversationName);
   await page.getByRole('button', { name: conversationName }).click();
 }
 

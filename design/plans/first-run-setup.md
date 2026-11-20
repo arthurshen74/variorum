@@ -13,7 +13,7 @@ port; `DatabaseView.tsx` wires it), `src/llm/resolve-model.ts`
 (`boundHandles`), `src/components/setup/{setup-step.ts,model-choice.ts}`.
 `src/domain/seed-configuration.ts` is REAL, not a stub (see "Green at
 planning").
-Full gate: npm run typecheck && npx vitest run && npx playwright test
+Full gate: npm run typecheck && npm run lint && npm run format:check && npx vitest run && npx playwright test
 
 Filters are by file: the `[G1]`–`[G3]` tags in the titles also match
 older features' tags.

@@ -7,18 +7,18 @@
  * sees: top_k and reasoning_effort must reach the request even though
  * the SDK provider does not send them natively.
  */
-import { beforeEach, describe, expect, it } from 'vitest';
 import type { UIMessage, UIMessageChunk } from 'ai';
+import { beforeEach, describe, expect, it } from 'vitest';
+import type { ConfigurationVersion } from '@/domain/types';
+import { variorumStore } from '@/state/store';
 import {
+  failOnTruncation,
   FINISH_REASON_LENGTH,
   TRUNCATED_RESPONSE_MESSAGE,
   VariorumChatTransport,
-  failOnTruncation,
 } from './chat-transport';
-import { PROVIDER_DOCUMENT_KEY } from './provider-document';
 import { installLocalStorageStub } from './local-storage-stub';
-import { variorumStore } from '@/state/store';
-import type { ConfigurationVersion } from '@/domain/types';
+import { PROVIDER_DOCUMENT_KEY } from './provider-document';
 
 const storage = installLocalStorageStub();
 
@@ -59,9 +59,7 @@ const VERSION_ONE: ConfigurationVersion = {
 function seedStore(versions: ConfigurationVersion[]): void {
   variorumStore.setState({
     hydrated: true,
-    configurations: [
-      { name: 'linkml', artifactType: 'yaml', archived: false },
-    ],
+    configurations: [{ name: 'linkml', artifactType: 'yaml', archived: false }],
     configurationVersions: versions,
     units: [
       {
@@ -267,9 +265,7 @@ describe('[G3] VariorumChatTransport', () => {
  * transport is the only code that sees a finish reason, so it is the only
  * place that makes this call.
  */
-function chunkStream(
-  chunks: UIMessageChunk[],
-): ReadableStream<UIMessageChunk> {
+function chunkStream(chunks: UIMessageChunk[]): ReadableStream<UIMessageChunk> {
   return new ReadableStream<UIMessageChunk>({
     start(controller) {
       for (const chunk of chunks) controller.enqueue(chunk);

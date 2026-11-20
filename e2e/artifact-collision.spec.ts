@@ -8,7 +8,7 @@
  * Locator contract: the prompt is a dialog offering "Keep my edit" and
  * "Take new revision".
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 interface Dump {
   units: { artifacts: { version: number; content: string }[] }[];

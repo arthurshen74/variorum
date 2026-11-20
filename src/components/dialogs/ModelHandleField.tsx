@@ -39,8 +39,9 @@ export function ModelHandleField({
   const anchorRef = useRef<HTMLDivElement>(null);
 
   const listboxId = `${id}-listbox`;
-  const options = typedSinceOpen
-    ? handles.filter((h) => h.toLowerCase().includes(value.toLowerCase()))
+  const options =
+    typedSinceOpen ?
+      handles.filter((h) => h.toLowerCase().includes(value.toLowerCase()))
     : handles;
 
   function openList() {
@@ -76,9 +77,15 @@ export function ModelHandleField({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={setOpen}
+    >
       <PopoverAnchor asChild>
-        <div ref={anchorRef} className="relative">
+        <div
+          ref={anchorRef}
+          className="relative"
+        >
           <input
             ref={inputRef}
             id={id}
@@ -87,7 +94,9 @@ export function ModelHandleField({
             aria-controls={listboxId}
             aria-autocomplete="list"
             aria-activedescendant={
-              open && activeIndex >= 0 ? `${id}-option-${activeIndex}` : undefined
+              open && activeIndex >= 0 ?
+                `${id}-option-${activeIndex}`
+              : undefined
             }
             className={cn(className, 'pr-8')}
             value={value}

@@ -12,8 +12,8 @@
  * implementation; the handlers below are the complete intended surface.
  */
 import { repository } from '@/persistence/repository';
-import { variorumStore } from '@/state/store';
 import { selectActiveUnits } from '@/state/selectors';
+import { variorumStore } from '@/state/store';
 
 /** UI-supplied gate: resolves true only if a human confirmed the archive. */
 export type ArchiveConfirmationGate = (

@@ -7,8 +7,8 @@ import { describe, expect, it } from 'vitest';
 import type { Endpoint, ProviderDocument } from './provider-document';
 import {
   MissingApiKeyError,
-  UnboundModelError,
   resolveModel,
+  UnboundModelError,
 } from './resolve-model';
 
 function endpoint(overrides: Partial<Endpoint> = {}): Endpoint {

@@ -9,6 +9,19 @@
  *  - Write order: IndexedDB `put` first (durability), then store update.
  *  - Reads are store selectors; there are no read methods here.
  */
+import {
+  EDIT_NOTICE_KIND,
+  editNoticeContent,
+  pendingEditNotice,
+} from '@/domain/edit-notice';
+import { assertValidDump, planMerge } from '@/domain/merge';
+import {
+  BUILT_IN_CONFIGURATION_DRAFT,
+  BUILT_IN_CONFIGURATION_INFO,
+  BUILT_IN_CONFIGURATION_NAME,
+} from '@/domain/seed-configuration';
+import { SCHEMA_VERSION } from '@/domain/types';
+import { variorumStore } from '@/state/store';
 import type {
   AssistantCompletion,
   Configuration,
@@ -21,18 +34,6 @@ import type {
   Unit,
   VariorumRepository,
 } from '@design/repository-api';
-import { SCHEMA_VERSION } from '@/domain/types';
-import {
-  BUILT_IN_CONFIGURATION_DRAFT,
-  BUILT_IN_CONFIGURATION_INFO,
-  BUILT_IN_CONFIGURATION_NAME,
-} from '@/domain/seed-configuration';
-import { assertValidDump, planMerge } from '@/domain/merge';
-import {
-  EDIT_NOTICE_KIND,
-  editNoticeContent,
-  pendingEditNotice,
-} from '@/domain/edit-notice';
 import {
   clearAndPutMany,
   deleteByKey,
@@ -41,7 +42,6 @@ import {
   put,
   putMany,
 } from './indexed-db-wrapper';
-import { variorumStore } from '@/state/store';
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -69,9 +69,7 @@ class Repository implements VariorumRepository {
   }
 
   private getUnit(unitId: string): Unit {
-    const unit = variorumStore
-      .getState()
-      .units.find((u) => u.id === unitId);
+    const unit = variorumStore.getState().units.find((u) => u.id === unitId);
     if (unit === undefined) {
       throw new Error(`unknown unit: ${unitId}`);
     }
@@ -137,9 +135,7 @@ class Repository implements VariorumRepository {
 
   /** Whether any name record, archived or not, carries the name. */
   private hasConfiguration(name: string): boolean {
-    return variorumStore
-      .getState()
-      .configurations.some((c) => c.name === name);
+    return variorumStore.getState().configurations.some((c) => c.name === name);
   }
 
   /** Name record + version 1. Callers run inside the queue and check the name. */
@@ -151,9 +147,9 @@ class Repository implements VariorumRepository {
       name: info.name,
       artifactType: info.artifactType,
       archived: false,
-      ...(info.description !== undefined
-        ? { description: info.description }
-        : {}),
+      ...(info.description !== undefined ?
+        { description: info.description }
+      : {}),
     };
     const versionOne: ConfigurationVersion = {
       name: info.name,
@@ -282,9 +278,9 @@ class Repository implements VariorumRepository {
         // Spread, not `reasoning: undefined` — structured clone keeps an
         // explicit-undefined key, and byte-equality on import would then
         // see two identical messages as different records.
-        ...(assistant.reasoning !== undefined
-          ? { reasoning: assistant.reasoning }
-          : {}),
+        ...(assistant.reasoning !== undefined ?
+          { reasoning: assistant.reasoning }
+        : {}),
         content: assistant.content,
       };
       const messages = [...unit.messages, message];
@@ -292,8 +288,9 @@ class Repository implements VariorumRepository {
       const changed =
         artifactContent !== undefined &&
         artifactContent !== lastRevision?.content;
-      const artifacts = changed
-        ? [
+      const artifacts =
+        changed ?
+          [
             ...unit.artifacts,
             {
               version: (lastRevision?.version ?? 0) + 1,
@@ -499,9 +496,7 @@ class Repository implements VariorumRepository {
           'prune requires a fresh export — export the database first (DESIGN.md "Prune")',
         );
       }
-      const archived = variorumStore
-        .getState()
-        .units.filter((u) => u.archived);
+      const archived = variorumStore.getState().units.filter((u) => u.archived);
       const db = this.requireDb();
       for (const unit of archived) {
         await deleteByKey(db, 'units', unit.id);

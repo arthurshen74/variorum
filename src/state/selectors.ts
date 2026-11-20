@@ -39,7 +39,8 @@ export const selectLatestVersion =
     s.configurationVersions
       .filter((v) => v.name === name)
       .reduce<ConfigurationVersion | undefined>(
-        (best, v) => (best === undefined || v.version > best.version ? v : best),
+        (best, v) =>
+          best === undefined || v.version > best.version ? v : best,
         undefined,
       );
 

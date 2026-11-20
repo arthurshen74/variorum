@@ -56,7 +56,10 @@ export default function NewUnitDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={handleOpenChange}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>New unit</DialogTitle>
@@ -66,7 +69,10 @@ export default function NewUnitDialog({
         </DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1">
-            <label htmlFor="unit-conversation-name" className={LABEL_CLASS}>
+            <label
+              htmlFor="unit-conversation-name"
+              className={LABEL_CLASS}
+            >
               Conversation name
             </label>
             <input
@@ -77,7 +83,10 @@ export default function NewUnitDialog({
             />
           </div>
           <div className="grid gap-1">
-            <label htmlFor="unit-configuration" className={LABEL_CLASS}>
+            <label
+              htmlFor="unit-configuration"
+              className={LABEL_CLASS}
+            >
               Configuration
             </label>
             <select
@@ -87,7 +96,10 @@ export default function NewUnitDialog({
               onChange={(event) => setConfigName(event.target.value)}
             >
               {configurations.map((configuration) => (
-                <option key={configuration.name} value={configuration.name}>
+                <option
+                  key={configuration.name}
+                  value={configuration.name}
+                >
                   {configuration.name}
                 </option>
               ))}
@@ -95,7 +107,10 @@ export default function NewUnitDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button

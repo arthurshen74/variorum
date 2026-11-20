@@ -8,6 +8,19 @@
  * state stays out of the store.
  */
 import { useState } from 'react';
+import {
+  type DatabasePorts,
+  pickReplaceFile,
+  runReplace,
+} from '@/components/dialogs/database-actions';
+import EndpointForm from '@/components/dialogs/EndpointForm';
+import {
+  deliverBackup,
+  deliverExport,
+  readDumpFile,
+} from '@/components/dialogs/file-io';
+import ModelForm from '@/components/dialogs/ModelForm';
+import { blankModelDraft } from '@/components/dialogs/provider-form';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,25 +30,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import EndpointForm from '@/components/dialogs/EndpointForm';
-import ModelForm from '@/components/dialogs/ModelForm';
-import {
-  pickReplaceFile,
-  runReplace,
-  type DatabasePorts,
-} from '@/components/dialogs/database-actions';
-import {
-  deliverBackup,
-  deliverExport,
-  readDumpFile,
-} from '@/components/dialogs/file-io';
-import { blankModelDraft } from '@/components/dialogs/provider-form';
 import type { DatabaseDump } from '@/domain/types';
 import {
+  type ProviderDocument,
+  ProviderDocumentError,
   readProviderDocument,
   writeProviderDocument,
-  ProviderDocumentError,
-  type ProviderDocument,
 } from '@/llm/provider-document';
 import {
   addEndpoint,
@@ -124,7 +124,10 @@ export default function SetupGate() {
     // No onOpenChange: Escape and outside clicks ask to close and nothing
     // answers. The gate closes when the document satisfies setupStep.
     <Dialog open>
-      <DialogContent showCloseButton={false} className="sm:max-w-lg">
+      <DialogContent
+        showCloseButton={false}
+        className="sm:max-w-lg"
+      >
         <DialogHeader>
           <DialogTitle>First-run setup</DialogTitle>
           <DialogDescription>
@@ -135,12 +138,18 @@ export default function SetupGate() {
         </DialogHeader>
 
         {alert !== null && (
-          <p role="alert" className={ALERT_CLASS}>
+          <p
+            role="alert"
+            className={ALERT_CLASS}
+          >
             {alert}
           </p>
         )}
         {status !== null && (
-          <div role="status" className={STATUS_CLASS}>
+          <div
+            role="status"
+            className={STATUS_CLASS}
+          >
             {status.map((line) => (
               <p key={line}>{line}</p>
             ))}

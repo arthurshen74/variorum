@@ -9,7 +9,7 @@
  * Locator contract: the readout is the element labeled "Token usage",
  * absent whenever there is nothing to show.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { MockLlm } from './mock-llm.ts';
 import { seedModelEndpoint } from './model-endpoint.ts';
 

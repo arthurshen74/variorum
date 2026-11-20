@@ -6,9 +6,9 @@
  */
 import 'fake-indexeddb/auto';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { repository } from './repository';
-import { variorumStore } from '@/state/store';
 import type { Unit } from '@/domain/types';
+import { variorumStore } from '@/state/store';
+import { repository } from './repository';
 
 const DRAFT = { modelName: 'm', systemPrompt: 's' };
 
@@ -45,9 +45,7 @@ describe('[G1] renameConversation — a label, not an identity', () => {
   it('touches nothing but the name', async () => {
     const unit = await newUnit('cfg-rename-rest');
     await repository.appendUserMessage(unit.id, 'hello');
-    const before = variorumStore
-      .getState()
-      .units.find((u) => u.id === unit.id);
+    const before = variorumStore.getState().units.find((u) => u.id === unit.id);
     const renamed = await repository.renameConversation(unit.id, 'after');
     expect(before).toBeDefined();
     const { conversationName: _b, ...beforeRest } = before as Unit;

@@ -11,48 +11,47 @@
  * Nodes stay invisible until placed, so no frame ever shows the stack of
  * nodes sitting at the origin awaiting measurement.
  */
+import '@xyflow/react/dist/style.css';
 import {
+  type CSSProperties,
   useEffect,
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
 } from 'react';
 import {
+  applyNodeChanges,
   Background,
   Controls,
-  MarkerType,
-  ReactFlow,
-  applyNodeChanges,
   type Edge,
   type EdgeTypes,
+  MarkerType,
   type Node,
   type NodeChange,
   type NodeTypes,
+  ReactFlow,
   type ReactFlowInstance,
   type Viewport,
 } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-
 import type { EditorProps } from '../extension';
 import { ClassNode } from './ClassNode';
+import {
+  type GraphDeviceState,
+  loadDeviceState,
+  saveDeviceState,
+} from './device-state';
 import { EnumNode } from './EnumNode';
-import { RelationshipEdge } from './RelationshipEdge';
 import {
   EDGE_TYPE_INHERITANCE,
   EDGE_TYPE_RELATIONSHIP,
+  type InheritanceEdgeData,
   NODE_TYPE_CLASS,
   NODE_TYPE_ENUM,
   toFlowGraph,
-  type InheritanceEdgeData,
 } from './flow-graph';
-import {
-  loadDeviceState,
-  saveDeviceState,
-  type GraphDeviceState,
-} from './device-state';
 import { layoutGraph, type MeasuredNode, type Positions } from './layout';
 import { parseLinkmlSchema } from './linkml-model';
+import { RelationshipEdge } from './RelationshipEdge';
 
 const nodeTypes: NodeTypes = {
   [NODE_TYPE_CLASS]: ClassNode,

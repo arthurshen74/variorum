@@ -4,16 +4,16 @@
  * character count, metadata narrowing at the boundary, and the readout
  * display grammar. Filter by file — older manifests reuse the [G1] tag.
  */
-import { beforeEach, describe, expect, it } from 'vitest';
 import type { UIMessage } from 'ai';
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
   CALIBRATION_MIN_TOKENS,
   DEFAULT_CHARS_PER_TOKEN,
-  TOKEN_RATIO_KEY_PREFIX,
   formatTokenReadout,
   getCharsPerToken,
   recordCalibration,
   streamedChars,
+  TOKEN_RATIO_KEY_PREFIX,
   usageFromMessage,
 } from './token-usage';
 

@@ -5,8 +5,8 @@
  * components and tool handlers never call setState. A vanilla store, so
  * non-React callers (LLM tool handlers) share the same state as the UI.
  */
-import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
+import { createStore } from 'zustand/vanilla';
 import type { Configuration, ConfigurationVersion, Unit } from '@/domain/types';
 
 export interface VariorumState {

@@ -16,7 +16,7 @@
  * Every test picks its configuration explicitly, so the built-in
  * configuration's presence in the picker does not matter here.
  */
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import { MockLlm } from './mock-llm.ts';
 
 const DOCUMENT_KEY = 'variorum.llm';

@@ -8,9 +8,9 @@
  */
 import 'fake-indexeddb/auto';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { repository } from './repository';
-import { variorumStore } from '@/state/store';
 import type { DatabaseDump } from '@/domain/types';
+import { variorumStore } from '@/state/store';
+import { repository } from './repository';
 
 const deliveryOk = async (): Promise<void> => {};
 
@@ -22,7 +22,12 @@ it('export dump contains exactly the three collections and no theme field', asyn
   await repository.boot();
   const dump = await repository.exportDatabase(deliveryOk);
   expect(Object.keys(dump).sort()).toEqual(
-    ['configurations', 'configurationVersions', 'schemaVersion', 'units'].sort(),
+    [
+      'configurations',
+      'configurationVersions',
+      'schemaVersion',
+      'units',
+    ].sort(),
   );
   expect(JSON.stringify(dump)).not.toContain('theme');
 });
@@ -75,8 +80,8 @@ describe('[G2] exportDatabase delivers before it clears the dirty bit', () => {
     );
     await expect(repository.pruneArchivedUnits()).rejects.toThrow(/export/);
     await repository.exportDatabase(deliveryOk);
-    await expect(repository.pruneArchivedUnits()).resolves.toBeGreaterThanOrEqual(
-      0,
-    );
+    await expect(
+      repository.pruneArchivedUnits(),
+    ).resolves.toBeGreaterThanOrEqual(0);
   });
 });

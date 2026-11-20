@@ -4,8 +4,7 @@
  * extension's validates hook — never for a broken draft. Offers a
  * one-click restore of the newest revision that parses.
  */
-import { useEffect, useState, type ReactElement } from 'react';
-
+import { type ReactElement, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { findLastValid } from '@/domain/revision-validity';
 import { repository } from '@/persistence/repository';
@@ -43,9 +42,9 @@ export function ParseFailureBanner({
     void findLastValid(unit.artifacts, validates).then((lastValid) => {
       if (!current) return;
       setProbe(
-        lastValid?.version === latest.version
-          ? { state: 'ok' }
-          : { state: 'broken', target: lastValid },
+        lastValid?.version === latest.version ?
+          { state: 'ok' }
+        : { state: 'broken', target: lastValid },
       );
     });
     return () => {
@@ -62,7 +61,7 @@ export function ParseFailureBanner({
         The latest revision doesn't parse.
         {target === null ? ' No earlier revision parses either.' : null}
       </span>
-      {target !== null ? (
+      {target !== null ?
         <Button
           className="ml-auto"
           variant="outline"
@@ -73,7 +72,7 @@ export function ParseFailureBanner({
         >
           Restore last valid revision
         </Button>
-      ) : null}
+      : null}
     </div>
   );
 }

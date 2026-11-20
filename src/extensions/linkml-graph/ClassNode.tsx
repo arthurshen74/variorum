@@ -4,8 +4,7 @@
  * edges rather than rows, so they contribute an unlabeled handle on the
  * right edge instead — the anchor their edge names in `sourceHandle`.
  */
-import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
-
+import { Handle, type Node, type NodeProps, Position } from '@xyflow/react';
 import type { ClassNodeData } from './flow-graph';
 
 /** Slot names whose edges leave this node without a row to anchor to. */

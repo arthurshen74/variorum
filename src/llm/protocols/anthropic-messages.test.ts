@@ -5,14 +5,14 @@
  * provider, and no openai-only splice — asserted through an injected
  * fetch against a scripted Messages endpoint.
  */
-import { describe, expect, it } from 'vitest';
 import { streamText } from 'ai';
+import { describe, expect, it } from 'vitest';
 import type { ConfigurationVersion } from '@/domain/types';
 import type { ResolvedModel } from './adapter';
 import {
   ANTHROPIC_BROWSER_HEADER,
-  DEFAULT_MAX_OUTPUT_TOKENS,
   anthropicMessagesAdapter,
+  DEFAULT_MAX_OUTPUT_TOKENS,
 } from './anthropic-messages';
 
 // A non-claude id: the provider's capability table passes everything

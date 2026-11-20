@@ -6,10 +6,10 @@
  */
 import 'fake-indexeddb/auto';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { repository } from './repository';
 import { editNoticeContent } from '@/domain/edit-notice';
-import { variorumStore } from '@/state/store';
 import type { AssistantCompletion, Unit } from '@/domain/types';
+import { variorumStore } from '@/state/store';
+import { repository } from './repository';
 
 const DRAFT = { modelName: 'm', systemPrompt: 's' };
 
@@ -55,7 +55,10 @@ describe('[G2] completeExchange — reasoning and the unchanged-artifact rule', 
   it('stores no reasoning field when the completion has none', async () => {
     const unit = await newUnit('cfg-no-reasoning');
     await repository.appendUserMessage(unit.id, 'hi');
-    const updated = await repository.completeExchange(unit.id, completion('ok'));
+    const updated = await repository.completeExchange(
+      unit.id,
+      completion('ok'),
+    );
     const message = updated.messages[1];
     expect(message).toBeDefined();
     expect(message !== undefined && 'reasoning' in message).toBe(false);
@@ -134,7 +137,10 @@ describe('[G2] completeExchange — reasoning and the unchanged-artifact rule', 
       systemPrompt: 's2',
     });
     await repository.appendUserMessage(unit.id, 'two');
-    const updated = await repository.completeExchange(unit.id, completion('r2'));
+    const updated = await repository.completeExchange(
+      unit.id,
+      completion('r2'),
+    );
     expect(updated.messages.map((m) => m.configVersion)).toEqual([1, 1, 2, 2]);
   });
 });

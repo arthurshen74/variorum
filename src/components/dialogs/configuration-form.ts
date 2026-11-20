@@ -40,7 +40,10 @@ export interface ConfigurationFormValues {
 
 export type ConfigurationFormResult =
   | { ok: true; info: NewConfigurationInfo; draft: ConfigurationDraft }
-  | { ok: false; errors: Partial<Record<keyof ConfigurationFormValues, string>> };
+  | {
+      ok: false;
+      errors: Partial<Record<keyof ConfigurationFormValues, string>>;
+    };
 
 /** Boundary validation: required fields, numeric parses, unset semantics. */
 export function parseConfigurationForm(
@@ -57,7 +60,8 @@ export function parseConfigurationForm(
 
   // Blank leaves the key off entirely, which is how a sampling parameter
   // stays out of the version record and out of the request.
-  const sampling: Partial<Record<(typeof SAMPLING_FIELDS)[number], number>> = {};
+  const sampling: Partial<Record<(typeof SAMPLING_FIELDS)[number], number>> =
+    {};
   for (const field of SAMPLING_FIELDS) {
     const text = values[field].trim();
     if (!text) continue;

@@ -4,7 +4,6 @@
  * on the first hit, none found is null.
  */
 import { describe, expect, it, vi } from 'vitest';
-
 import type { Artifact } from '@design/repository-api';
 import { findLastValid } from './revision-validity';
 

@@ -6,10 +6,10 @@
  */
 import 'fake-indexeddb/auto';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { repository } from './repository';
 import { editNoticeContent } from '@/domain/edit-notice';
-import { variorumStore } from '@/state/store';
 import type { AssistantCompletion, Unit } from '@/domain/types';
+import { variorumStore } from '@/state/store';
+import { repository } from './repository';
 
 const DRAFT = { modelName: 'm', systemPrompt: 's' };
 
@@ -151,9 +151,8 @@ describe('[G1] appendPendingEditNotice — the Refresh notice', () => {
     const unit = await stranded('cfg-rf-artifacts');
     await repository.saveManualEdit(unit.id, 'x: 1\n');
     const before = structuredClone(
-      (
-        variorumStore.getState().units.find((u) => u.id === unit.id) as Unit
-      ).artifacts,
+      (variorumStore.getState().units.find((u) => u.id === unit.id) as Unit)
+        .artifacts,
     );
     const updated = await repository.appendPendingEditNotice(unit.id);
 

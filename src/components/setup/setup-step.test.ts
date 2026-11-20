@@ -6,10 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseEndpointDraft } from '@/components/dialogs/provider-form';
 import { DEFAULT_ENDPOINT_PROTOCOL } from '@/llm/protocols/registry';
-import {
-  DEFAULT_ENDPOINT_URL,
-  type Endpoint,
-} from '@/llm/provider-document';
+import { DEFAULT_ENDPOINT_URL, type Endpoint } from '@/llm/provider-document';
 import { setupEndpointDraft, setupStep } from './setup-step';
 
 function endpoint(overrides: Partial<Endpoint> = {}): Endpoint {

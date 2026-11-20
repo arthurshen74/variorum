@@ -78,15 +78,17 @@ export default function Sidebar({
         </button>
       </div>
       <nav className="min-h-0 flex-1 overflow-auto p-2">
-        {units.length === 0 ? (
+        {units.length === 0 ?
           <p className="px-2 py-4 text-xs text-muted-foreground">
             No units yet. Create a configuration first, then a unit.
           </p>
-        ) : (
-          <ul className="space-y-1">
+        : <ul className="space-y-1">
             {units.map((unit) => (
-              <li key={unit.id} className="flex items-center gap-1">
-                {unit.id === editingUnitId ? (
+              <li
+                key={unit.id}
+                className="flex items-center gap-1"
+              >
+                {unit.id === editingUnitId ?
                   <input
                     aria-label="Conversation name"
                     autoFocus
@@ -99,8 +101,7 @@ export default function Sidebar({
                     }}
                     className="min-w-0 flex-1 rounded-md border bg-background px-2 py-1.5 text-sm"
                   />
-                ) : (
-                  <>
+                : <>
                     <button
                       type="button"
                       onClick={() => onSelectUnit(unit.id)}
@@ -120,7 +121,10 @@ export default function Sidebar({
                       onClick={() => startRename(unit)}
                       className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                     >
-                      <PencilIcon aria-hidden="true" className="size-3.5" />
+                      <PencilIcon
+                        aria-hidden="true"
+                        className="size-3.5"
+                      />
                       <span className="sr-only">Rename</span>
                     </button>
                     <button
@@ -128,15 +132,18 @@ export default function Sidebar({
                       onClick={() => onArchiveUnit(unit)}
                       className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                     >
-                      <ArchiveIcon aria-hidden="true" className="size-3.5" />
+                      <ArchiveIcon
+                        aria-hidden="true"
+                        className="size-3.5"
+                      />
                       <span className="sr-only">Archive</span>
                     </button>
                   </>
-                )}
+                }
               </li>
             ))}
           </ul>
-        )}
+        }
       </nav>
       <div className="border-t p-2">
         <button
@@ -144,7 +151,10 @@ export default function Sidebar({
           onClick={onOpenConfigurations}
           className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
         >
-          <SettingsIcon aria-hidden="true" className="size-4" />
+          <SettingsIcon
+            aria-hidden="true"
+            className="size-4"
+          />
           <span className="sr-only">Configurations</span>
         </button>
         <div className="flex items-center justify-between px-2 py-1.5">

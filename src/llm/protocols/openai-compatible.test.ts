@@ -4,8 +4,8 @@
  * splice for top_k / reasoning_effort, and no cap — asserted through an
  * injected fetch against a scripted chat-completions endpoint.
  */
-import { describe, expect, it } from 'vitest';
 import { streamText } from 'ai';
+import { describe, expect, it } from 'vitest';
 import type { ConfigurationVersion } from '@/domain/types';
 import type { ResolvedModel } from './adapter';
 import { openAiCompatibleAdapter } from './openai-compatible';

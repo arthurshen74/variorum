@@ -7,7 +7,7 @@
  * has no alias into src/.
  */
 import { readFile } from 'node:fs/promises';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 interface Dump {
   schemaVersion: number;

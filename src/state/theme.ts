@@ -50,7 +50,10 @@ function systemSchemeQuery(): MediaQueryList {
 }
 
 function apply(): void {
-  const resolved = resolveTheme(getThemePreference(), systemSchemeQuery().matches);
+  const resolved = resolveTheme(
+    getThemePreference(),
+    systemSchemeQuery().matches,
+  );
   document.documentElement.classList.toggle('dark', resolved === 'dark');
 }
 

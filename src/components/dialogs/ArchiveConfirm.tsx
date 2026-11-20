@@ -50,7 +50,10 @@ export default function ArchiveConfirm({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button
+            variant="outline"
+            onClick={onClose}
+          >
             Cancel
           </Button>
           <Button

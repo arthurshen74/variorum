@@ -14,9 +14,7 @@
 /** The word a fence's info string carries to declare itself the artifact. */
 export const ARTIFACT_FENCE_MARKER = 'artifact';
 
-const MARKED_INFO = new RegExp(
-  `(?:^|\\s)${ARTIFACT_FENCE_MARKER}(?:\\s|$)`,
-);
+const MARKED_INFO = new RegExp(`(?:^|\\s)${ARTIFACT_FENCE_MARKER}(?:\\s|$)`);
 
 export function extractArtifact(
   responseText: string,

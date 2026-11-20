@@ -4,15 +4,15 @@
  * no browser, no IndexedDB — the repository and file-io arrive as mocks.
  */
 import { describe, expect, it, vi } from 'vitest';
-import type { ImportReport } from '@design/repository-api';
 import type { DatabaseDump } from '@/domain/types';
+import type { ImportReport } from '@design/repository-api';
 import {
+  type DatabasePorts,
   importReportLines,
   pickReplaceFile,
   runExport,
   runImport,
   runReplace,
-  type DatabasePorts,
 } from './database-actions';
 
 const EMPTY_DUMP: DatabaseDump = {

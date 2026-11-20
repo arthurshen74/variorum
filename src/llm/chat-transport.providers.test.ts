@@ -5,16 +5,16 @@
  * wire id versus the handle, and key precedence on the wire — through an
  * injected fetch against scripted endpoints of both protocols.
  */
-import { beforeEach, describe, expect, it } from 'vitest';
 import type { UIMessage, UIMessageChunk } from 'ai';
+import { beforeEach, describe, expect, it } from 'vitest';
+import type { ConfigurationVersion } from '@/domain/types';
+import { variorumStore } from '@/state/store';
 import { VariorumChatTransport } from './chat-transport';
 import { installLocalStorageStub } from './local-storage-stub';
 import {
   PROVIDER_DOCUMENT_KEY,
   type ProviderDocument,
 } from './provider-document';
-import { variorumStore } from '@/state/store';
-import type { ConfigurationVersion } from '@/domain/types';
 
 const storage = installLocalStorageStub();
 

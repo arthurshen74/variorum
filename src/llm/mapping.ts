@@ -37,15 +37,15 @@ export function toUIMessages(messages: Message[]): UIMessage[] {
     id: `message-${index}`,
     role: message.role,
     parts: [
-      ...(message.reasoning !== undefined
-        ? [
-            {
-              type: PART_REASONING,
-              text: message.reasoning,
-              state: 'done',
-            } as const,
-          ]
-        : []),
+      ...(message.reasoning !== undefined ?
+        [
+          {
+            type: PART_REASONING,
+            text: message.reasoning,
+            state: 'done',
+          } as const,
+        ]
+      : []),
       { type: PART_TEXT, text: message.content } as const,
     ],
   }));
@@ -88,9 +88,9 @@ export function completionFromUIMessage(
   );
   return toAssistantCompletion({
     content: text.map((part) => part.text).join(''),
-    ...(reasoning.length > 0
-      ? { reasoning: reasoning.map((part) => part.text).join('') }
-      : {}),
+    ...(reasoning.length > 0 ?
+      { reasoning: reasoning.map((part) => part.text).join('') }
+    : {}),
     sentAt,
     receivedFinishedAt,
   });

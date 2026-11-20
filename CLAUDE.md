@@ -66,7 +66,10 @@ So, with that said, the details:
 - No `any`. If a type is genuinely unknown, use `unknown` and narrow.
 - Components are function components. No class components.
 - One component per file, named export. Co-located styles only if Tailwind isn't enough (it usually is).
-- Imports ordered: react/third-party, `@/` first-party, relative. Auto-managed by Prettier/ESLint.
+- Imports ordered: side-effect imports, react/third-party, `@/` and `@design/`
+  first-party, relative; alphabetical within each group. Enforced by ESLint
+  (`npm run lint:fix`); layout by Prettier (`.prettierrc`). Both skip the
+  vendored `src/components/ui/` and `src/components/ai-elements/`.
 - Prefer composition over `useEffect`. If you reach for `useEffect`, ask whether Zustand or a derived value would do the job.
 
 ### File and function size
@@ -223,7 +226,9 @@ LLM tool surface:
   mandatory — a planning run never writes implementation code, and an
   implementation run never starts before its plan is approved.
 - Definition of done:
-  `npm run typecheck && npx vitest run && npx playwright test` — all green.
+  `npm run typecheck && npm run lint && npm run format:check && npx vitest run && npx playwright test`
+  — all green. `npm run lint:fix` and `npm run format` fix the two
+  style checks.
 - Tests are the spec. NEVER modify a test to make it pass in the same
   session that implements the code under test. A locked test changes only
   through a human-approved spec amendment (spec first, then the test),

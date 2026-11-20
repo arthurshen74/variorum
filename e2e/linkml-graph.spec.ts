@@ -10,7 +10,7 @@
  * "Auto-arrange"; the pane's dirty marker is the text "unsaved" beside a
  * "Save" button (ArtifactPane's existing contract).
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 interface DevRepository {
   createConfiguration(
@@ -129,9 +129,7 @@ test('[G3] breaking the YAML in the Editor replaces the graph with a parse error
   await page.keyboard.type('a: b: c');
 
   await page.getByRole('button', { name: 'Graph' }).click();
-  await expect(
-    page.getByText("This artifact isn't valid YAML"),
-  ).toBeVisible();
+  await expect(page.getByText("This artifact isn't valid YAML")).toBeVisible();
   await expect(personNode(page)).toBeHidden();
   await expect(page.getByRole('button', { name: 'Auto-arrange' })).toBeHidden();
 });

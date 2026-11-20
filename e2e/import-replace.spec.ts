@@ -102,7 +102,9 @@ test('[G2] a replaced database survives reload', async ({ page }) => {
     const dump = await repository.exportDatabase(async () => {});
     const fresh: Dump = {
       schemaVersion: dump.schemaVersion,
-      configurations: [{ name: 'fresh', artifactType: 'yaml', archived: false }],
+      configurations: [
+        { name: 'fresh', artifactType: 'yaml', archived: false },
+      ],
       configurationVersions: [
         {
           name: 'fresh',

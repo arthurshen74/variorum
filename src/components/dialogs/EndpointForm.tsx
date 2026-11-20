@@ -16,7 +16,7 @@ import {
 import type { ApiProtocol } from '@/llm/protocols/adapter';
 import { apiProtocols, protocolAdapter } from '@/llm/protocols/registry';
 import type { EndpointInput } from '@/llm/provider-mutations';
-import { parseEndpointDraft, type EndpointDraft } from './provider-form';
+import { type EndpointDraft, parseEndpointDraft } from './provider-form';
 
 const LABEL_CLASS = 'text-xs font-medium';
 const INPUT_CLASS = 'w-full rounded-md border bg-background px-2 py-1 text-sm';
@@ -60,7 +60,10 @@ export default function EndpointForm({
       <h3 className="text-sm font-medium">{title}</h3>
 
       <div className="grid gap-1">
-        <label htmlFor="endpoint-url" className={LABEL_CLASS}>
+        <label
+          htmlFor="endpoint-url"
+          className={LABEL_CLASS}
+        >
           Endpoint URL
         </label>
         <input
@@ -77,12 +80,18 @@ export default function EndpointForm({
           value={draft.api}
           onValueChange={(value) => setField('api', value as ApiProtocol)}
         >
-          <SelectTrigger aria-label="Protocol" className="w-full">
+          <SelectTrigger
+            aria-label="Protocol"
+            className="w-full"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {apiProtocols().map((protocol) => (
-              <SelectItem key={protocol} value={protocol}>
+              <SelectItem
+                key={protocol}
+                value={protocol}
+              >
                 {protocolAdapter(protocol).label}
               </SelectItem>
             ))}
@@ -97,14 +106,20 @@ export default function EndpointForm({
           checked={draft.authRequired}
           onChange={(event) => setField('authRequired', event.target.checked)}
         />
-        <label htmlFor="endpoint-auth-required" className={LABEL_CLASS}>
+        <label
+          htmlFor="endpoint-auth-required"
+          className={LABEL_CLASS}
+        >
           Requires authentication
         </label>
       </div>
 
       {draft.authRequired && (
         <div className="grid gap-1">
-          <label htmlFor="endpoint-api-key" className={LABEL_CLASS}>
+          <label
+            htmlFor="endpoint-api-key"
+            className={LABEL_CLASS}
+          >
             API key
           </label>
           <input
@@ -119,11 +134,18 @@ export default function EndpointForm({
 
       <div className="flex justify-end gap-2">
         {onCancel !== undefined && (
-          <Button size="sm" variant="outline" onClick={onCancel}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onCancel}
+          >
             Cancel
           </Button>
         )}
-        <Button size="sm" onClick={save}>
+        <Button
+          size="sm"
+          onClick={save}
+        >
           Save
         </Button>
       </div>

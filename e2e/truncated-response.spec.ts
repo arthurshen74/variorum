@@ -8,7 +8,7 @@
  * Locator contract: the error row is the alert carrying the truncation
  * message, with a "Retry" button; everything else follows chat.spec.ts.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { MockLlm } from './mock-llm.ts';
 import { seedModelEndpoint } from './model-endpoint.ts';
 

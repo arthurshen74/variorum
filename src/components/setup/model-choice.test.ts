@@ -11,8 +11,8 @@ import type { ProviderDocument } from '@/llm/provider-document';
 import {
   createUnitWithModel,
   modelChoiceFor,
-  rebindDraft,
   type ModelChoicePorts,
+  rebindDraft,
 } from './model-choice';
 
 const DOCUMENT: ProviderDocument = {

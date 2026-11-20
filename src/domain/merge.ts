@@ -311,9 +311,7 @@ function mintLineageName(base: string, taken: Set<string>): string {
 
 /** Where a diverged incoming unit lands. */
 type UnitLanding =
-  | { write: 'skip' }
-  | { write: 'fastForward'; unit: Unit }
-  | { write: 'clone' };
+  { write: 'skip' } | { write: 'fastForward'; unit: Unit } | { write: 'clone' };
 
 function mergeUnits(
   localUnits: Unit[],
@@ -397,7 +395,7 @@ function findUnitLanding(
       longest = { unit: candidate, have };
     }
   }
-  return longest
-    ? { write: 'fastForward', unit: longest.unit }
+  return longest ?
+      { write: 'fastForward', unit: longest.unit }
     : { write: 'clone' };
 }

@@ -10,7 +10,7 @@
  * management-ui.spec.ts pattern). Structural types are declared locally
  * because the e2e project has no alias into src/.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { seedModelEndpoint } from './model-endpoint.ts';
 
 const BUILT_IN = 'link-ml';

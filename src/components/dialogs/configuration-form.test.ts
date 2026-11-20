@@ -6,10 +6,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Configuration, ConfigurationVersion } from '@/domain/types';
 import {
+  type ConfigurationFormValues,
   draftEqualsVersion,
   formValuesFromVersion,
   parseConfigurationForm,
-  type ConfigurationFormValues,
 } from './configuration-form';
 
 const filledValues: ConfigurationFormValues = {
@@ -88,7 +88,10 @@ describe('[G1] parseConfigurationForm', () => {
 
   it('maps reasoning stop 0 to an omitted reasoningEffort and stops 1-3 to low/medium/high', () => {
     const at = (reasoningIndex: number) => {
-      const result = parseConfigurationForm({ ...filledValues, reasoningIndex });
+      const result = parseConfigurationForm({
+        ...filledValues,
+        reasoningIndex,
+      });
       if (!result.ok) throw new Error('expected ok');
       return result.draft;
     };
@@ -106,7 +109,10 @@ describe('[G1] parseConfigurationForm', () => {
   });
 
   it('rejects an empty artifactType with an error keyed to artifactType', () => {
-    const result = parseConfigurationForm({ ...filledValues, artifactType: '' });
+    const result = parseConfigurationForm({
+      ...filledValues,
+      artifactType: '',
+    });
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('expected failure');
     expect(result.errors.artifactType).toBeTruthy();
@@ -196,7 +202,10 @@ describe('[G1] draftEqualsVersion', () => {
       draftEqualsVersion({ ...fullDraft, modelName: 'other' }, fullVersion),
     ).toBe(false);
     expect(
-      draftEqualsVersion({ ...fullDraft, systemPrompt: 'changed' }, fullVersion),
+      draftEqualsVersion(
+        { ...fullDraft, systemPrompt: 'changed' },
+        fullVersion,
+      ),
     ).toBe(false);
     expect(
       draftEqualsVersion({ ...fullDraft, temperature: 0.8 }, fullVersion),
@@ -204,11 +213,14 @@ describe('[G1] draftEqualsVersion', () => {
     expect(
       draftEqualsVersion({ ...fullDraft, topP: undefined }, fullVersion),
     ).toBe(false);
+    expect(draftEqualsVersion({ ...fullDraft, topK: 41 }, fullVersion)).toBe(
+      false,
+    );
     expect(
-      draftEqualsVersion({ ...fullDraft, topK: 41 }, fullVersion),
-    ).toBe(false);
-    expect(
-      draftEqualsVersion({ ...fullDraft, reasoningEffort: undefined }, fullVersion),
+      draftEqualsVersion(
+        { ...fullDraft, reasoningEffort: undefined },
+        fullVersion,
+      ),
     ).toBe(false);
   });
 });

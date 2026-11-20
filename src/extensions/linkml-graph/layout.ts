@@ -47,9 +47,8 @@ export async function layoutGraph(
 
   const laidOut = await elk.layout({
     id: 'root',
-    layoutOptions: anySaved
-      ? { ...LAYOUT_OPTIONS, ...INTERACTIVE_OPTIONS }
-      : LAYOUT_OPTIONS,
+    layoutOptions:
+      anySaved ? { ...LAYOUT_OPTIONS, ...INTERACTIVE_OPTIONS } : LAYOUT_OPTIONS,
     children: nodes.map((node) => ({
       id: node.id,
       width: node.width,

@@ -4,8 +4,7 @@
  * cardinality derivation, inverse pairing, and boundary handling.
  */
 import { describe, expect, it } from 'vitest';
-
-import { parseLinkmlSchema, type LinkmlGraph } from './linkml-model';
+import { type LinkmlGraph, parseLinkmlSchema } from './linkml-model';
 
 function parseOk(content: string): LinkmlGraph {
   const result = parseLinkmlSchema(content);

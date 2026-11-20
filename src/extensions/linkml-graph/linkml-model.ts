@@ -57,8 +57,7 @@ export interface LinkmlGraph {
 }
 
 export type ParseResult =
-  | { ok: true; graph: LinkmlGraph }
-  | { ok: false; error: string };
+  { ok: true; graph: LinkmlGraph } | { ok: false; error: string };
 
 /** LinkML's own fallback when a schema declares no default_range. */
 const IMPLICIT_DEFAULT_RANGE = 'string';

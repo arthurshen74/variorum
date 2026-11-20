@@ -19,8 +19,8 @@ import type { Endpoint } from '@/llm/provider-document';
 import type { ModelInput } from '@/llm/provider-mutations';
 import {
   endpointLabel,
-  parseModelDraft,
   type ModelDraft,
+  parseModelDraft,
 } from './provider-form';
 
 export interface ModelFormProps {
@@ -90,7 +90,10 @@ export default function ModelForm({
       <h3 className="text-sm font-medium">{title}</h3>
 
       <div className="grid gap-1">
-        <label htmlFor="model-name" className={LABEL_CLASS}>
+        <label
+          htmlFor="model-name"
+          className={LABEL_CLASS}
+        >
           Model name
         </label>
         <input
@@ -102,7 +105,10 @@ export default function ModelForm({
       </div>
 
       <div className="grid gap-1">
-        <label htmlFor="model-handle" className={LABEL_CLASS}>
+        <label
+          htmlFor="model-handle"
+          className={LABEL_CLASS}
+        >
           Handle
         </label>
         <input
@@ -115,13 +121,22 @@ export default function ModelForm({
 
       <div className="grid gap-1">
         <span className={LABEL_CLASS}>Endpoint</span>
-        <Select value={endpointId} onValueChange={setEndpointId}>
-          <SelectTrigger aria-label="Endpoint" className="w-full">
+        <Select
+          value={endpointId}
+          onValueChange={setEndpointId}
+        >
+          <SelectTrigger
+            aria-label="Endpoint"
+            className="w-full"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {endpoints.map((candidate) => (
-              <SelectItem key={candidate.id} value={candidate.id}>
+              <SelectItem
+                key={candidate.id}
+                value={candidate.id}
+              >
                 {endpointLabel(candidate)}
               </SelectItem>
             ))}
@@ -131,7 +146,10 @@ export default function ModelForm({
 
       {endpoint.authRequired && (
         <div className="grid gap-1">
-          <label htmlFor="model-api-key" className={LABEL_CLASS}>
+          <label
+            htmlFor="model-api-key"
+            className={LABEL_CLASS}
+          >
             API key
           </label>
           <input
@@ -151,7 +169,10 @@ export default function ModelForm({
 
       {protocolAdapter(endpoint.api).usesMaxOutputTokens && (
         <div className="grid gap-1">
-          <label htmlFor="model-max-output-tokens" className={LABEL_CLASS}>
+          <label
+            htmlFor="model-max-output-tokens"
+            className={LABEL_CLASS}
+          >
             Max output tokens
           </label>
           <input
@@ -172,11 +193,18 @@ export default function ModelForm({
 
       <div className="flex justify-end gap-2">
         {onCancel !== undefined && (
-          <Button size="sm" variant="outline" onClick={onCancel}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onCancel}
+          >
             Cancel
           </Button>
         )}
-        <Button size="sm" onClick={save}>
+        <Button
+          size="sm"
+          onClick={save}
+        >
           Save
         </Button>
       </div>

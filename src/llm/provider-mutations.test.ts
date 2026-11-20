@@ -6,18 +6,18 @@
 import { describe, expect, it } from 'vitest';
 import type { Endpoint, ProviderDocument } from './provider-document';
 import {
-  ENDPOINT_EXISTS_MESSAGE,
-  ENDPOINT_HAS_MODELS_MESSAGE,
-  HANDLE_EXISTS_MESSAGE,
-  MODEL_EXISTS_ON_ENDPOINT_MESSAGE,
   addEndpoint,
   addModel,
   deleteEndpoint,
   deleteModel,
+  ENDPOINT_EXISTS_MESSAGE,
+  ENDPOINT_HAS_MODELS_MESSAGE,
+  HANDLE_EXISTS_MESSAGE,
+  MODEL_EXISTS_ON_ENDPOINT_MESSAGE,
+  type MutationResult,
   reassignModel,
   updateEndpoint,
   updateModel,
-  type MutationResult,
 } from './provider-mutations';
 
 function endpoint(overrides: Partial<Endpoint> = {}): Endpoint {

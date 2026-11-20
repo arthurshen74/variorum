@@ -6,7 +6,6 @@
  * business: this dialog only reports the row that was clicked.
  */
 import type { ReactElement } from 'react';
-
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -41,7 +40,10 @@ export function HistoryDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>History</DialogTitle>

@@ -113,9 +113,9 @@ function modelRows(group: Group, endpointKey: string | undefined): ModelRow[] {
       modelName,
       handle: modelName,
       ...(apiKey !== undefined ? { apiKey } : {}),
-      ...(binding.maxOutputTokens !== undefined
-        ? { maxOutputTokens: binding.maxOutputTokens }
-        : {}),
+      ...(binding.maxOutputTokens !== undefined ?
+        { maxOutputTokens: binding.maxOutputTokens }
+      : {}),
     };
   });
 }

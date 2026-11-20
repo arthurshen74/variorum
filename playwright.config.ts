@@ -29,9 +29,7 @@ const DEFAULT_PROVIDER_DOCUMENT = {
       url: 'http://127.0.0.1:9/v1',
       api: 'openai-compatible',
       authRequired: false,
-      models: [
-        { modelName: 'e2e-default-model', handle: 'e2e-default-model' },
-      ],
+      models: [{ modelName: 'e2e-default-model', handle: 'e2e-default-model' }],
     },
   ],
 };

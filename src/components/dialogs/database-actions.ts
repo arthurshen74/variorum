@@ -5,8 +5,8 @@
  * repository and file-io functions arrive as an injected ports object,
  * which is what keeps these paths unit-testable in node.
  */
-import type { ImportReport } from '@design/repository-api';
 import type { DatabaseDump } from '@/domain/types';
+import type { ImportReport } from '@design/repository-api';
 
 /** The slice of repository + file-io the Database view drives. */
 export interface DatabasePorts {
@@ -105,7 +105,9 @@ export async function runReplace(
 export function importReportLines(report: ImportReport): string[] {
   const lines: string[] = [];
   if (report.configurationsAdded.length > 0) {
-    lines.push(`Configurations added: ${report.configurationsAdded.join(', ')}`);
+    lines.push(
+      `Configurations added: ${report.configurationsAdded.join(', ')}`,
+    );
   }
   if (report.configurationsFastForwarded.length > 0) {
     const designators = report.configurationsFastForwarded.flatMap(

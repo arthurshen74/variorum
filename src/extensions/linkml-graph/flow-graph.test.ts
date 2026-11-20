@@ -3,7 +3,6 @@
  * node/edge types, ids, slot-row handles, and edge label data.
  */
 import { describe, expect, it } from 'vitest';
-
 import {
   EDGE_TYPE_ENUM_REF,
   EDGE_TYPE_INHERITANCE,

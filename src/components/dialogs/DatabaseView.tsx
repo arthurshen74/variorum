@@ -15,12 +15,12 @@ import {
 import type { DatabaseDump } from '@/domain/types';
 import { repository } from '@/persistence/repository';
 import {
+  type ActionOutcome,
+  type DatabasePorts,
   pickReplaceFile,
   runExport,
   runImport,
   runReplace,
-  type ActionOutcome,
-  type DatabasePorts,
 } from './database-actions';
 import { deliverBackup, deliverExport, readDumpFile } from './file-io';
 
@@ -98,12 +98,18 @@ export default function DatabaseView({
       </DialogHeader>
 
       {outcome?.kind === 'error' && (
-        <p role="alert" className={ALERT_CLASS}>
+        <p
+          role="alert"
+          className={ALERT_CLASS}
+        >
           {outcome.message}
         </p>
       )}
       {(outcome?.kind === 'success' || outcome?.kind === 'cancelled') && (
-        <div role="status" className={STATUS_CLASS}>
+        <div
+          role="status"
+          className={STATUS_CLASS}
+        >
           {outcome.kind === 'cancelled' ?
             <p>{CANCELLED_MESSAGE}</p>
           : outcome.lines.map((line) => <p key={line}>{line}</p>)}
@@ -144,8 +150,8 @@ export default function DatabaseView({
         </div>
       : <div className={CONFIRM_CLASS}>
           <p>
-            The entire database will be replaced by the chosen file — every
-            unit and configuration now in it goes away.
+            The entire database will be replaced by the chosen file — every unit
+            and configuration now in it goes away.
           </p>
           <p>A pre-replace backup downloads before anything is deleted.</p>
         </div>
@@ -153,7 +159,11 @@ export default function DatabaseView({
 
       <DialogFooter>
         {pending === null ?
-          <Button variant="outline" disabled={busy} onClick={onBack}>
+          <Button
+            variant="outline"
+            disabled={busy}
+            onClick={onBack}
+          >
             Back
           </Button>
         : <>

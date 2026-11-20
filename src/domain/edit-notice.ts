@@ -32,9 +32,8 @@ export function editNoticeContent(
   artifactType: string,
   artifactContent: string,
 ): string {
-  const body = artifactContent.endsWith('\n')
-    ? artifactContent
-    : artifactContent + '\n';
+  const body =
+    artifactContent.endsWith('\n') ? artifactContent : artifactContent + '\n';
   return (
     `${NOTICE_PREFIX}\n\n` +
     `\`\`\`${artifactType} ${ARTIFACT_FENCE_MARKER}\n${body}\`\`\`\n`

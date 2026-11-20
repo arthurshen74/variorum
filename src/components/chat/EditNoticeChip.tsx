@@ -3,8 +3,8 @@
  * (DESIGN.md "Manual edits enter the conversation"): "You edited →
  * revision N", resolved through the notice's artifactVersion.
  */
-import type { ReactElement } from 'react';
 import { PencilLine } from 'lucide-react';
+import type { ReactElement } from 'react';
 
 export interface EditNoticeChipProps {
   artifactVersion: number;

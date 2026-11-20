@@ -16,7 +16,7 @@
  * This spec starts every test from empty storage: it is the one place the
  * app is met as a fresh machine.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -318,7 +318,9 @@ test('[G2] Restore from backup: file, then confirmation; Confirm downloads the p
   ]);
 
   await completeSetup(page);
-  await expect(page.getByRole('button', { name: 'fresh thread' })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'fresh thread' }),
+  ).toBeVisible();
 });
 
 test('[G2] cancelling the restore confirmation changes nothing', async ({

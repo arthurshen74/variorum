@@ -189,7 +189,9 @@ test('[G3] a dump chosen from the file input merges into the database', async ({
 
   const incoming: Dump = {
     schemaVersion: 1,
-    configurations: [{ name: 'from-file', artifactType: 'yaml', archived: false }],
+    configurations: [
+      { name: 'from-file', artifactType: 'yaml', archived: false },
+    ],
     configurationVersions: [
       {
         name: 'from-file',
@@ -264,7 +266,10 @@ test('[G3] a malformed file is rejected and the database is unchanged', async ({
   await chooser.setFiles({
     name: 'broken.json',
     mimeType: 'application/json',
-    buffer: Buffer.from('{ "schemaVersion": 1, "units": "not an array" }', 'utf8'),
+    buffer: Buffer.from(
+      '{ "schemaVersion": 1, "units": "not an array" }',
+      'utf8',
+    ),
   });
 
   expect(await outcomePromise).toMatch(/^rejected:/);

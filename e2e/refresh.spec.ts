@@ -10,7 +10,7 @@
  * beside the loader and the error row, and never visible at the same time
  * as the error row's "Retry"; everything else follows chat.spec.ts.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { MockLlm } from './mock-llm.ts';
 import { seedModelEndpoint } from './model-endpoint.ts';
 

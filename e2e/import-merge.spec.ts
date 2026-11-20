@@ -38,7 +38,10 @@ interface DevRepository {
     name: string,
     draft: { modelName: string; systemPrompt: string },
   ): Promise<unknown>;
-  createUnit(conversationName: string, configName: string): Promise<{ id: string }>;
+  createUnit(
+    conversationName: string,
+    configName: string,
+  ): Promise<{ id: string }>;
   exportDatabase(deliver: (dump: Dump) => Promise<void>): Promise<Dump>;
   importDatabase(dump: Dump): Promise<Report>;
 }

@@ -23,15 +23,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useVariorum } from '@/state/store';
-import { selectConfiguration, selectUnit } from '@/state/selectors';
-import { applicableExtensions } from '@/extensions/registry';
 import type { ExtensionContext } from '@/extensions/extension';
+import { applicableExtensions } from '@/extensions/registry';
 import { repository } from '@/persistence/repository';
+import { selectConfiguration, selectUnit } from '@/state/selectors';
+import { useVariorum } from '@/state/store';
 import type { Artifact } from '@design/repository-api';
 import { HistoryDialog } from './HistoryDialog';
 import { ParseFailureBanner } from './ParseFailureBanner';
-import { chipFor, viewGateFor, type ViewBuffer } from './view-buffer';
+import { chipFor, type ViewBuffer, viewGateFor } from './view-buffer';
 
 interface ArtifactPaneProps {
   unitId: string | null;
@@ -43,14 +43,17 @@ interface ArtifactPaneProps {
 
 export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
   const unit = useVariorum(
-    useMemo(() => (unitId === null ? () => undefined : selectUnit(unitId)), [unitId]),
+    useMemo(
+      () => (unitId === null ? () => undefined : selectUnit(unitId)),
+      [unitId],
+    ),
   );
   const configuration = useVariorum(
     useMemo(
       () =>
-        unit === undefined
-          ? () => undefined
-          : selectConfiguration(unit.configName),
+        unit === undefined ?
+          () => undefined
+        : selectConfiguration(unit.configName),
       [unit],
     ),
   );
@@ -112,8 +115,7 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
   };
   const tabs = applicableExtensions(context);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
-  const activeTab =
-    tabs.find((t) => t.id === activeTabId) ?? tabs[0] ?? null;
+  const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0] ?? null;
 
   if (unit === undefined) {
     return (
@@ -140,18 +142,18 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
             type="button"
             onClick={() => setActiveTabId(tab.id)}
             className={`rounded-md px-2 py-1 text-xs ${
-              tab.id === activeTab?.id
-                ? 'bg-accent font-medium'
-                : 'text-muted-foreground hover:bg-accent'
+              tab.id === activeTab?.id ?
+                'bg-accent font-medium'
+              : 'text-muted-foreground hover:bg-accent'
             }`}
           >
             {tab.title}
           </button>
         ))}
         <div className="ml-auto flex items-center gap-2">
-          {chip !== null ? (
+          {chip !== null ?
             <span className="text-xs text-muted-foreground">{chip}</span>
-          ) : null}
+          : null}
           <button
             type="button"
             onClick={() => void copyWorking()}
@@ -178,11 +180,14 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
           </button>
         </div>
       </div>
-      {validates !== undefined ? (
-        <ParseFailureBanner unit={unit} validates={validates} />
-      ) : null}
+      {validates !== undefined ?
+        <ParseFailureBanner
+          unit={unit}
+          validates={validates}
+        />
+      : null}
       <div className="min-h-0 flex-1">
-        {ExtensionComponent !== null ? (
+        {ExtensionComponent !== null ?
           <Suspense
             fallback={
               <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
@@ -197,16 +202,16 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
                 // echoes it back; only a differing value is an edit, and
                 // only an edit demotes the viewed designator.
                 setBuffer((current) =>
-                  next === current.working
-                    ? current
-                    : { ...current, working: next, viewedVersion: null },
+                  next === current.working ?
+                    current
+                  : { ...current, working: next, viewedVersion: null },
                 );
               }}
               readOnly={false}
               context={context}
             />
           </Suspense>
-        ) : null}
+        : null}
       </div>
       <HistoryDialog
         unit={unit}
@@ -221,19 +226,25 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
           }
         }}
       />
-      {pendingView !== null ? (
-        <Dialog open onOpenChange={() => setPendingView(null)}>
+      {pendingView !== null ?
+        <Dialog
+          open
+          onOpenChange={() => setPendingView(null)}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Discard unsaved edits?</DialogTitle>
               <DialogDescription>
                 Viewing revision v{pendingView.version} replaces the working
-                copy with that revision's content. Edits you have not saved
-                will be lost.
+                copy with that revision's content. Edits you have not saved will
+                be lost.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setPendingView(null)}>
+              <Button
+                variant="outline"
+                onClick={() => setPendingView(null)}
+              >
                 Cancel
               </Button>
               <Button
@@ -247,7 +258,7 @@ export default function ArtifactPane({ unitId }: ArtifactPaneProps) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      ) : null}
+      : null}
       <Dialog open={collision}>
         {/* Undismissable: leaving without choosing would re-prompt on the
             next render, so the two buttons are the only ways out. */}

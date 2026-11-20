@@ -6,12 +6,11 @@
  */
 import {
   BaseEdge,
-  EdgeLabelRenderer,
-  getBezierPath,
   type Edge,
+  EdgeLabelRenderer,
   type EdgeProps,
+  getBezierPath,
 } from '@xyflow/react';
-
 import type { RelationshipEdgeData } from './flow-graph';
 
 export type RelationshipFlowEdge = Edge<RelationshipEdgeData>;
@@ -48,7 +47,9 @@ export function RelationshipEdge({
       <EdgeLabelRenderer>
         <div
           className={LABEL_CLASS}
-          style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
+          style={{
+            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+          }}
         >
           {data?.slotName} {data?.cardinality}
         </div>

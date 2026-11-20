@@ -10,19 +10,15 @@
  */
 import 'fake-indexeddb/auto';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { repository } from './repository';
-import { variorumStore } from '@/state/store';
 import {
   BUILT_IN_CONFIGURATION_DRAFT,
   BUILT_IN_CONFIGURATION_INFO,
   BUILT_IN_CONFIGURATION_NAME,
 } from '@/domain/seed-configuration';
-import type {
-  ConfigurationVersion,
-  DatabaseDump,
-  Unit,
-} from '@/domain/types';
+import type { ConfigurationVersion, DatabaseDump, Unit } from '@/domain/types';
 import { SCHEMA_VERSION } from '@/domain/types';
+import { variorumStore } from '@/state/store';
+import { repository } from './repository';
 
 const T = '2026-01-01T00:00:00.000Z';
 
@@ -54,7 +50,9 @@ const emptyDump = (): DatabaseDump => ({
 /** One single-version lineage with one unit, under any name but the built-in's. */
 const otherDump = (): DatabaseDump => ({
   schemaVersion: SCHEMA_VERSION,
-  configurations: [{ name: 'other-cfg', artifactType: 'yaml', archived: false }],
+  configurations: [
+    { name: 'other-cfg', artifactType: 'yaml', archived: false },
+  ],
   configurationVersions: [
     { name: 'other-cfg', version: 1, modelName: 'm', systemPrompt: 's' },
   ],

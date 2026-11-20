@@ -5,7 +5,7 @@
  * included — renders the active theme's tokens. System scheme is driven
  * with Playwright's emulateMedia, never mocked inside the app.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 const DARK_CLASS = /\bdark\b/;
 
@@ -63,22 +63,26 @@ async function seedUnit(page: Page): Promise<void> {
   await page.reload();
 }
 
-test('boots dark under auto when the browser prefers dark', async ({ page }) => {
+test('boots dark under auto when the browser prefers dark', async ({
+  page,
+}) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/');
   await expect(html(page)).toHaveClass(DARK_CLASS);
 });
 
-test('boots light under auto when the browser prefers light', async ({ page }) => {
+test('boots light under auto when the browser prefers light', async ({
+  page,
+}) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/');
-  await expect(
-    page.getByRole('heading', { name: 'Variorum' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Variorum' })).toBeVisible();
   await expect(html(page)).not.toHaveClass(DARK_CLASS);
 });
 
-test('follows a mid-session color-scheme flip while in auto', async ({ page }) => {
+test('follows a mid-session color-scheme flip while in auto', async ({
+  page,
+}) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/');
   await expect(html(page)).toHaveClass(DARK_CLASS);
@@ -86,7 +90,9 @@ test('follows a mid-session color-scheme flip while in auto', async ({ page }) =
   await expect(html(page)).not.toHaveClass(DARK_CLASS);
 });
 
-test('selecting light overrides a dark browser preference', async ({ page }) => {
+test('selecting light overrides a dark browser preference', async ({
+  page,
+}) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/');
   await expect(html(page)).toHaveClass(DARK_CLASS);
@@ -118,7 +124,9 @@ test('returning to auto resumes following the browser', async ({ page }) => {
   await expect(html(page)).not.toHaveClass(DARK_CLASS);
 });
 
-test("the artifact editor pane renders with the dark theme's colors", async ({ page }) => {
+test("the artifact editor pane renders with the dark theme's colors", async ({
+  page,
+}) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/');
   await seedUnit(page);

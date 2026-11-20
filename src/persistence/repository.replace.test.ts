@@ -7,10 +7,10 @@
  */
 import 'fake-indexeddb/auto';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { repository } from './repository';
-import { variorumStore } from '@/state/store';
 import type { DatabaseDump, Unit } from '@/domain/types';
 import { SCHEMA_VERSION } from '@/domain/types';
+import { variorumStore } from '@/state/store';
+import { repository } from './repository';
 
 const T = '2026-01-01T00:00:00.000Z';
 
@@ -77,7 +77,10 @@ describe('[G2] replaceDatabase', () => {
   });
 
   it('returns a pre-wipe backup that deep-equals the pre-replace database', async () => {
-    await repository.replaceDatabase(dumpWith('base-cfg', 'base-u1'), deliveryOk);
+    await repository.replaceDatabase(
+      dumpWith('base-cfg', 'base-u1'),
+      deliveryOk,
+    );
     const before = variorumStore.getState();
     const backup = await repository.replaceDatabase(
       dumpWith('next-cfg'),
@@ -92,7 +95,10 @@ describe('[G2] replaceDatabase', () => {
   });
 
   it('refuses a schemaVersion mismatch, leaving database, store, and dirty bit untouched', async () => {
-    await repository.replaceDatabase(dumpWith('kept-cfg', 'kept-u1'), deliveryOk);
+    await repository.replaceDatabase(
+      dumpWith('kept-cfg', 'kept-u1'),
+      deliveryOk,
+    );
     await repository.exportDatabase(deliveryOk);
     const before = variorumStore.getState();
     expect(before.dirtySinceExport).toBe(false);
@@ -204,9 +210,9 @@ describe('[G2] replaceDatabase delivers before it destroys', () => {
         .configurations.map((c) => c.name);
     });
     expect(seenDuringDelivery).toEqual(['pre-cfg']);
-    expect(
-      variorumStore.getState().configurations.map((c) => c.name),
-    ).toEqual(['post-cfg']);
+    expect(variorumStore.getState().configurations.map((c) => c.name)).toEqual([
+      'post-cfg',
+    ]);
   });
 
   it('hands the deliverer the same backup it returns', async () => {
@@ -232,7 +238,10 @@ describe('[G2] replaceDatabase delivers before it destroys', () => {
   });
 
   it('a rejected delivery propagates and leaves store and dirty bit untouched', async () => {
-    await repository.replaceDatabase(dumpWith('safe-cfg', 'safe-u1'), deliveryOk);
+    await repository.replaceDatabase(
+      dumpWith('safe-cfg', 'safe-u1'),
+      deliveryOk,
+    );
     await repository.exportDatabase(deliveryOk);
     const before = variorumStore.getState();
     expect(before.dirtySinceExport).toBe(false);

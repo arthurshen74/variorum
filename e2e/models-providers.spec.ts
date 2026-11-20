@@ -26,7 +26,7 @@
  * bound handle, unfiltered on open); selecting an option fills the
  * input (amendment A10, design/plans/models-providers.md).
  */
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import { MockAnthropic } from './mock-anthropic.ts';
 import { MockLlm } from './mock-llm.ts';
 
@@ -550,9 +550,7 @@ test("[G4] the configuration form's Model field offers the document's handles an
     const { repository } = (window as unknown as DevWindow).variorum;
     return repository.exportDatabase(async () => {});
   });
-  expect(
-    dump.configurationVersions.filter((v) => v.name === 'free'),
-  ).toEqual([
+  expect(dump.configurationVersions.filter((v) => v.name === 'free')).toEqual([
     expect.objectContaining({
       name: 'free',
       version: 1,

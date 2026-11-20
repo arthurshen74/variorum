@@ -6,10 +6,10 @@
  */
 import 'fake-indexeddb/auto';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { repository } from './repository';
-import { variorumStore } from '@/state/store';
 import type { DatabaseDump } from '@/domain/types';
 import { SCHEMA_VERSION } from '@/domain/types';
+import { variorumStore } from '@/state/store';
+import { repository } from './repository';
 
 const T = '2026-01-01T00:00:00.000Z';
 
@@ -23,19 +23,19 @@ const dumpWith = (configName: string, unitId?: string): DatabaseDump => ({
     { name: configName, version: 1, modelName: 'm', systemPrompt: 's' },
   ],
   units:
-    unitId === undefined
-      ? []
-      : [
-          {
-            id: unitId,
-            conversationName: `conversation ${unitId}`,
-            configName,
-            createdAt: T,
-            archived: false,
-            messages: [],
-            artifacts: [],
-          },
-        ],
+    unitId === undefined ?
+      []
+    : [
+        {
+          id: unitId,
+          conversationName: `conversation ${unitId}`,
+          configName,
+          createdAt: T,
+          archived: false,
+          messages: [],
+          artifacts: [],
+        },
+      ],
 });
 
 describe('[G2] importDatabase', () => {

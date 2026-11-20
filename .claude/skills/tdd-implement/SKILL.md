@@ -52,8 +52,10 @@ Work the task list under these rules:
   scope means the manifest is wrong — stop and tell the human; the human
   amends the manifest, not you.
 - The ratchet: this group's filters green, then the FULL gate green
-  (`CI=1 npm run typecheck && CI=1 npx vitest run && CI=1 npx playwright
-test`). No previously green test may go red.
+  (`CI=1 npm run typecheck && CI=1 npm run lint && CI=1 npm run
+  format:check && CI=1 npx vitest run && CI=1 npx playwright test`). No
+  previously green test may go red. `npm run lint:fix` and `npm run
+  format` fix the two style checks.
 - Tests are locked. Amendment protocol: if a test appears wrong or the
   spec ambiguous, STOP; name the test and explain why the SPEC is wrong
   or unclear; wait for the human's ruling. On approval: spec delta

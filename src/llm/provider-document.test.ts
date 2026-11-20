@@ -9,15 +9,15 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { installLocalStorageStub } from './local-storage-stub';
 import {
   DEFAULT_ENDPOINT_URL,
-  PROVIDER_DOCUMENT_KEY,
-  ProviderDocumentError,
+  type Endpoint,
   normalizeApiKey,
   parseEndpointUrl,
   parseProviderDocument,
+  PROVIDER_DOCUMENT_KEY,
+  type ProviderDocument,
+  ProviderDocumentError,
   readProviderDocument,
   writeProviderDocument,
-  type Endpoint,
-  type ProviderDocument,
 } from './provider-document';
 
 const storage = installLocalStorageStub();

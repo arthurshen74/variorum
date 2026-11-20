@@ -8,7 +8,7 @@
  * Locator contract: the notice chip carries the text
  * "You edited → revision N"; everything else follows chat.spec.ts.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { MockLlm } from './mock-llm.ts';
 import { seedModelEndpoint } from './model-endpoint.ts';
 

@@ -5,8 +5,8 @@
  * fence, prose. While streaming the fence renders as a growing code
  * block; the chip appears only on completed messages.
  */
-import type { ReactElement } from 'react';
 import { isReasoningUIPart, isTextUIPart, type UIMessage } from 'ai';
+import type { ReactElement } from 'react';
 import {
   Message,
   MessageContent,
@@ -77,34 +77,35 @@ export function ChatMessage({
   const text = joinText(message);
   // Nothing is THE artifact until the message completes, so a fence still
   // streaming stays inline as an ordinary code block.
-  const partitioned = isStreaming
-    ? { before: text, artifact: null, after: '' }
+  const partitioned =
+    isStreaming ?
+      { before: text, artifact: null, after: '' }
     : partitionResponse(text, artifactType);
 
   return (
     <Message from={message.role}>
       <MessageContent>
-        {reasoning !== '' ? (
+        {reasoning !== '' ?
           <Reasoning isStreaming={isStreaming}>
             <ReasoningTrigger>Reasoning</ReasoningTrigger>
             <ReasoningContent>{reasoning}</ReasoningContent>
           </Reasoning>
-        ) : null}
-        {partitioned.before !== '' ? (
+        : null}
+        {partitioned.before !== '' ?
           <MessageResponse isStreaming={isStreaming}>
             {partitioned.before}
           </MessageResponse>
-        ) : null}
-        {partitioned.artifact !== null ? (
+        : null}
+        {partitioned.artifact !== null ?
           <ArtifactChip revisionVersion={revisionVersion} />
-        ) : null}
-        {partitioned.after !== '' ? (
+        : null}
+        {partitioned.after !== '' ?
           <MessageResponse>{partitioned.after}</MessageResponse>
-        ) : null}
+        : null}
       </MessageContent>
-      {versionTag !== '' ? (
+      {versionTag !== '' ?
         <span className="text-[11px] text-muted-foreground">{versionTag}</span>
-      ) : null}
+      : null}
     </Message>
   );
 }

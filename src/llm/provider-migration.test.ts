@@ -11,11 +11,11 @@ import {
   type ProviderDocument,
 } from './provider-document';
 import {
-  LEGACY_BINDING_KEY_PREFIX,
   foldLegacyBindings,
+  LEGACY_BINDING_KEY_PREFIX,
+  type LegacyBinding,
   readLegacyBindings,
   removeLegacyBindings,
-  type LegacyBinding,
 } from './provider-migration';
 
 const storage = installLocalStorageStub();

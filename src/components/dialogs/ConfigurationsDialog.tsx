@@ -20,16 +20,16 @@ import { readProviderDocument } from '@/llm/provider-document';
 import { repository } from '@/persistence/repository';
 import { selectConfiguration, selectLatestVersion } from '@/state/selectors';
 import { useVariorum, variorumStore } from '@/state/store';
-import DatabaseView from './DatabaseView';
-import { ModelHandleField } from './ModelHandleField';
-import ProvidersView from './ProvidersView';
 import {
+  type ConfigurationFormValues,
   draftEqualsVersion,
   formValuesFromVersion,
   parseConfigurationForm,
   REASONING_EFFORT_STOPS,
-  type ConfigurationFormValues,
 } from './configuration-form';
+import DatabaseView from './DatabaseView';
+import { ModelHandleField } from './ModelHandleField';
+import ProvidersView from './ProvidersView';
 
 export interface ConfigurationsDialogProps {
   open: boolean;
@@ -194,19 +194,25 @@ export default function ConfigurationsDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={handleOpenChange}
+    >
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         {view.kind === 'list' && (
           <>
             <DialogHeader>
               <DialogTitle>Configurations</DialogTitle>
               <DialogDescription>
-                Named recipes for producing artifacts. Versions are
-                append-only, so editing one mints the next.
+                Named recipes for producing artifacts. Versions are append-only,
+                so editing one mints the next.
               </DialogDescription>
             </DialogHeader>
             <div className="flex gap-2">
-              <Button size="sm" onClick={showAdd}>
+              <Button
+                size="sm"
+                onClick={showAdd}
+              >
                 Add new configuration
               </Button>
               <Button
@@ -224,23 +230,25 @@ export default function ConfigurationsDialog({
                 Database
               </Button>
             </div>
-            {active.length === 0 ? (
+            {active.length === 0 ?
               <p className="text-xs text-muted-foreground">
                 No active configurations yet.
               </p>
-            ) : (
-              <ul className="grid gap-1">
+            : <ul className="grid gap-1">
                 {active.map((configuration) => (
-                  <li key={configuration.name} className={ROW_CLASS}>
+                  <li
+                    key={configuration.name}
+                    className={ROW_CLASS}
+                  >
                     <div className="min-w-0 flex-1">
                       <span className="block truncate font-medium">
                         {configuration.name}
                       </span>
                       <span className="block truncate text-xs text-muted-foreground">
                         {configuration.artifactType}
-                        {configuration.description
-                          ? ` · ${configuration.description}`
-                          : ''}
+                        {configuration.description ?
+                          ` · ${configuration.description}`
+                        : ''}
                       </span>
                     </div>
                     <Button
@@ -254,7 +262,9 @@ export default function ConfigurationsDialog({
                       size="xs"
                       variant="outline"
                       onClick={() => {
-                        void repository.archiveConfiguration(configuration.name);
+                        void repository.archiveConfiguration(
+                          configuration.name,
+                        );
                       }}
                     >
                       Archive
@@ -262,7 +272,7 @@ export default function ConfigurationsDialog({
                   </li>
                 ))}
               </ul>
-            )}
+            }
             {archived.length > 0 && (
               <>
                 <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -305,24 +315,30 @@ export default function ConfigurationsDialog({
           <>
             <DialogHeader>
               <DialogTitle>
-                {view.kind === 'edit'
-                  ? `Edit ${view.name}`
-                  : 'New configuration'}
+                {view.kind === 'edit' ?
+                  `Edit ${view.name}`
+                : 'New configuration'}
               </DialogTitle>
               <DialogDescription>
-                {editing
-                  ? 'Name and artifact type are fixed at creation. A changed recipe mints the next version.'
-                  : 'Saving mints version 1 of this configuration.'}
+                {editing ?
+                  'Name and artifact type are fixed at creation. A changed recipe mints the next version.'
+                : 'Saving mints version 1 of this configuration.'}
               </DialogDescription>
             </DialogHeader>
             {alert !== null && (
-              <p role="alert" className={ALERT_CLASS}>
+              <p
+                role="alert"
+                className={ALERT_CLASS}
+              >
                 {alert}
               </p>
             )}
             <div className="grid gap-3">
               <div className="grid gap-1">
-                <label htmlFor="config-name" className={LABEL_CLASS}>
+                <label
+                  htmlFor="config-name"
+                  className={LABEL_CLASS}
+                >
                   Name
                 </label>
                 <input
@@ -337,7 +353,10 @@ export default function ConfigurationsDialog({
                 )}
               </div>
               <div className="grid gap-1">
-                <label htmlFor="config-artifact-type" className={LABEL_CLASS}>
+                <label
+                  htmlFor="config-artifact-type"
+                  className={LABEL_CLASS}
+                >
                   Artifact type
                 </label>
                 <input
@@ -354,7 +373,10 @@ export default function ConfigurationsDialog({
                 )}
               </div>
               <div className="grid gap-1">
-                <label htmlFor="config-description" className={LABEL_CLASS}>
+                <label
+                  htmlFor="config-description"
+                  className={LABEL_CLASS}
+                >
                   Description
                 </label>
                 <input
@@ -367,7 +389,10 @@ export default function ConfigurationsDialog({
                 />
               </div>
               <div className="grid gap-1">
-                <label htmlFor="config-model" className={LABEL_CLASS}>
+                <label
+                  htmlFor="config-model"
+                  className={LABEL_CLASS}
+                >
                   Model
                 </label>
                 <ModelHandleField
@@ -382,7 +407,10 @@ export default function ConfigurationsDialog({
                 )}
               </div>
               <div className="grid gap-1">
-                <label htmlFor="config-system-prompt" className={LABEL_CLASS}>
+                <label
+                  htmlFor="config-system-prompt"
+                  className={LABEL_CLASS}
+                >
                   System prompt
                 </label>
                 <textarea
@@ -397,8 +425,14 @@ export default function ConfigurationsDialog({
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {SAMPLING_FIELDS.map((field) => (
-                  <div key={field.key} className="grid gap-1">
-                    <label htmlFor={field.id} className={LABEL_CLASS}>
+                  <div
+                    key={field.key}
+                    className="grid gap-1"
+                  >
+                    <label
+                      htmlFor={field.id}
+                      className={LABEL_CLASS}
+                    >
                       {field.label}
                     </label>
                     <input
@@ -418,7 +452,10 @@ export default function ConfigurationsDialog({
                 ))}
               </div>
               <div className="grid gap-2">
-                <span id="config-reasoning-label" className={LABEL_CLASS}>
+                <span
+                  id="config-reasoning-label"
+                  className={LABEL_CLASS}
+                >
                   Reasoning effort:{' '}
                   {REASONING_EFFORT_STOPS[values.reasoningIndex] ??
                     UNSET_EFFORT_LABEL}
@@ -439,7 +476,10 @@ export default function ConfigurationsDialog({
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={showList}>
+              <Button
+                variant="outline"
+                onClick={showList}
+              >
                 Cancel
               </Button>
               <Button
@@ -454,7 +494,10 @@ export default function ConfigurationsDialog({
         )}
 
         {view.kind === 'database' && (
-          <DatabaseView onReplaced={onReplaced} onBack={showList} />
+          <DatabaseView
+            onReplaced={onReplaced}
+            onBack={showList}
+          />
         )}
 
         {view.kind === 'providers' && <ProvidersView onBack={showList} />}

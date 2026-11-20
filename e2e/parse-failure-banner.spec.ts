@@ -11,7 +11,7 @@
  * React Flow's `.react-flow__node` marks graph nodes (as in
  * linkml-graph.spec.ts).
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 interface DevRepository {
   createConfiguration(
@@ -52,18 +52,15 @@ test.beforeEach(async ({ page }) => {
 
 /** Seeds a link-ml unit; contents become revisions v1, v2, ... */
 async function seedLinkmlUnit(page: Page, contents: string[]): Promise<string> {
-  const unitId = await page.evaluate(
-    async (revisions) => {
-      const { repository } = (window as unknown as DevWindow).variorum;
-      // The built-in link-ml exists from load (DESIGN.md "First-Run Setup").
-      const unit = await repository.createUnit('schema', 'link-ml');
-      for (const content of revisions) {
-        await repository.saveManualEdit(unit.id, content);
-      }
-      return unit.id;
-    },
-    contents,
-  );
+  const unitId = await page.evaluate(async (revisions) => {
+    const { repository } = (window as unknown as DevWindow).variorum;
+    // The built-in link-ml exists from load (DESIGN.md "First-Run Setup").
+    const unit = await repository.createUnit('schema', 'link-ml');
+    for (const content of revisions) {
+      await repository.saveManualEdit(unit.id, content);
+    }
+    return unit.id;
+  }, contents);
   await page.getByRole('button', { name: 'schema' }).click();
   return unitId;
 }

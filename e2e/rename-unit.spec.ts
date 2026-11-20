@@ -5,7 +5,7 @@
  * calls nothing. Locators define the accessibility contract: the pencil
  * is a button named "Rename", the input is labelled "Conversation name".
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 interface Dump {
   units: { id: string; conversationName: string }[];

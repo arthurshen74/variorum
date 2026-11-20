@@ -12,7 +12,7 @@
  * dialog. The collision prompt is ArtifactPane's existing "A new revision
  * landed" dialog.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 interface DevRepository {
   createConfiguration(

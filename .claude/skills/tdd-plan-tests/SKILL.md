@@ -113,7 +113,8 @@ edits and do not defend the draft. Frozen on approval. Wait.
 Write the stubs and ALL the tests. Run the full suite and show the
 output:
 
-- `npm run typecheck` passes with stubs in place.
+- `npm run typecheck`, `npm run lint` and `npm run format:check` pass
+  with stubs and tests in place.
 - Every new test is red for the RIGHT reason — a failed assertion or a
   not-implemented throw, never an import or compile error.
 - Every previously existing test is still green.
@@ -136,7 +137,7 @@ implementation under any circumstances.
 
 Spec: DESIGN.md § "<section title>" — approved <YYYY-MM-DD>
 Stubs: <paths of stub files>
-Full gate: npm run typecheck && npx vitest run && npx playwright test
+Full gate: npm run typecheck && npm run lint && npm run format:check && npx vitest run && npx playwright test
 
 ## Groups
 

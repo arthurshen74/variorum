@@ -7,9 +7,9 @@
  * IndexedDB.
  */
 import { describe, expect, it, vi } from 'vitest';
-import type { ImportReport } from '@design/repository-api';
 import type { DatabaseDump } from '@/domain/types';
-import { runReplace, type DatabasePorts } from './database-actions';
+import type { ImportReport } from '@design/repository-api';
+import { type DatabasePorts, runReplace } from './database-actions';
 
 const EMPTY_DUMP: DatabaseDump = {
   schemaVersion: 1,

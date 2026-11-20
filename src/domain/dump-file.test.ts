@@ -353,7 +353,9 @@ describe('[G1] parseDump — Artifact', () => {
   );
 
   it('rejects a source outside the union', () => {
-    expect(() => parseDump(withArtifact({ source: 'robot' }))).toThrow(/source/);
+    expect(() => parseDump(withArtifact({ source: 'robot' }))).toThrow(
+      /source/,
+    );
   });
 
   it('accepts an absent messageIndex', () => {
@@ -446,7 +448,9 @@ describe('[G1] parseDump — boundary discipline', () => {
         configName: 'linkml',
         createdAt: T,
         archived: false,
-        messages: [{ role: 'user', configVersion: 1, sentAt: T, content: 'hello' }],
+        messages: [
+          { role: 'user', configVersion: 1, sentAt: T, content: 'hello' },
+        ],
         artifacts: [
           { version: 1, savedAt: T, source: 'manual', content: 'x: 1' },
         ],

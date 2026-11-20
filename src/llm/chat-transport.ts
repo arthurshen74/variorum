@@ -11,7 +11,6 @@
  * the single file that would change if requests ever routed through a
  * proxy.
  */
-import { streamText, toUIMessageStream } from 'ai';
 import type {
   ChatTransport,
   TextStreamPart,
@@ -19,15 +18,16 @@ import type {
   UIMessage,
   UIMessageChunk,
 } from 'ai';
-import { variorumStore } from '@/state/store';
-import { selectLatestVersion, selectUnit } from '@/state/selectors';
+import { streamText, toUIMessageStream } from 'ai';
 import type { ConfigurationVersion } from '@/domain/types';
+import { selectLatestVersion, selectUnit } from '@/state/selectors';
+import { variorumStore } from '@/state/store';
 import { toModelMessages } from './mapping';
-import type { UsageMetadata } from './token-usage';
 import type { PreparedRequest } from './protocols/adapter';
 import { protocolAdapter } from './protocols/registry';
 import { readProviderDocument } from './provider-document';
 import { resolveModel } from './resolve-model';
+import type { UsageMetadata } from './token-usage';
 
 /**
  * Handle to request, entirely at call time: a document edit between sends

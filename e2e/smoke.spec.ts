@@ -7,8 +7,8 @@ import { expect, test } from '@playwright/test';
 
 test('the app shell boots', async ({ page }) => {
   await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Variorum' })).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: 'Variorum' }),
+    page.getByRole('button', { name: 'Toggle sidebar' }),
   ).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Toggle sidebar' })).toBeVisible();
 });

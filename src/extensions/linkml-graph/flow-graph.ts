@@ -4,12 +4,7 @@
  * name. Positions default to the origin — placement is layout's job.
  */
 import type { Edge, Node } from '@xyflow/react';
-
-import type {
-  Cardinality,
-  EffectiveSlot,
-  LinkmlGraph,
-} from './linkml-model';
+import type { Cardinality, EffectiveSlot, LinkmlGraph } from './linkml-model';
 
 export const NODE_TYPE_CLASS = 'linkml-class';
 export const NODE_TYPE_ENUM = 'linkml-enum';

@@ -23,8 +23,7 @@ export interface ModelInput {
 }
 
 export type MutationResult =
-  | { ok: true; document: ProviderDocument }
-  | { ok: false; message: string };
+  { ok: true; document: ProviderDocument } | { ok: false; message: string };
 
 export const ENDPOINT_EXISTS_MESSAGE =
   'An endpoint with this URL and protocol already exists.';
@@ -107,9 +106,9 @@ function modelRow(input: ModelInput): ModelRow {
     modelName: input.modelName,
     handle: input.handle,
     ...(input.apiKey !== undefined ? { apiKey: input.apiKey } : {}),
-    ...(input.maxOutputTokens !== undefined
-      ? { maxOutputTokens: input.maxOutputTokens }
-      : {}),
+    ...(input.maxOutputTokens !== undefined ?
+      { maxOutputTokens: input.maxOutputTokens }
+    : {}),
   };
 }
 
@@ -121,9 +120,9 @@ function withModels(
 ): ProviderDocument {
   return {
     endpoints: document.endpoints.map((endpoint) =>
-      endpoint.id === endpointId
-        ? { ...endpoint, models: models(endpoint) }
-        : endpoint,
+      endpoint.id === endpointId ?
+        { ...endpoint, models: models(endpoint) }
+      : endpoint,
     ),
   };
 }

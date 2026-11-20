@@ -5,7 +5,6 @@
  * graph viewer judges parseability; extension zero declares no hook.
  */
 import { describe, expect, it } from 'vitest';
-
 import { applicableExtensions, extensions } from './registry';
 
 describe('[G3] registry', () => {

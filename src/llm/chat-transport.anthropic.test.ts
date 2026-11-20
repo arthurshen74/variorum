@@ -6,16 +6,16 @@
  * all through an injected fetch against a scripted Messages endpoint.
  * Filter by file — older manifests reuse the [G2] tag.
  */
-import { beforeEach, describe, expect, it } from 'vitest';
 import type { UIMessage, UIMessageChunk } from 'ai';
+import { beforeEach, describe, expect, it } from 'vitest';
+import type { ConfigurationVersion } from '@/domain/types';
+import { variorumStore } from '@/state/store';
 import {
   TRUNCATED_RESPONSE_MESSAGE,
   VariorumChatTransport,
 } from './chat-transport';
-import { PROVIDER_DOCUMENT_KEY } from './provider-document';
 import { installLocalStorageStub } from './local-storage-stub';
-import { variorumStore } from '@/state/store';
-import type { ConfigurationVersion } from '@/domain/types';
+import { PROVIDER_DOCUMENT_KEY } from './provider-document';
 
 const storage = installLocalStorageStub();
 
@@ -137,7 +137,10 @@ function anthropicSse(script: Script): string {
   events.push({ type: 'content_block_stop', index });
   events.push({
     type: 'message_delta',
-    delta: { stop_reason: script.stopReason ?? 'end_turn', stop_sequence: null },
+    delta: {
+      stop_reason: script.stopReason ?? 'end_turn',
+      stop_sequence: null,
+    },
     usage: { output_tokens: script.outputTokens ?? 2 },
   });
   events.push({ type: 'message_stop' });
@@ -191,11 +194,18 @@ async function collect(
   return chunks;
 }
 
-function deltasOf(chunks: UIMessageChunk[], type: 'text-delta' | 'reasoning-delta') {
+function deltasOf(
+  chunks: UIMessageChunk[],
+  type: 'text-delta' | 'reasoning-delta',
+) {
   return chunks
     .filter(
-      (c): c is Extract<UIMessageChunk, { type: 'text-delta' | 'reasoning-delta' }> =>
-        c.type === type,
+      (
+        c,
+      ): c is Extract<
+        UIMessageChunk,
+        { type: 'text-delta' | 'reasoning-delta' }
+      > => c.type === type,
     )
     .map((c) => c.delta)
     .join('');

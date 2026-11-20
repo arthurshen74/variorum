@@ -5,6 +5,8 @@
  * human-approved spec amendment recorded in the feature manifest.
  */
 import { describe, expect, it } from 'vitest';
+import type { MergePlan } from './merge';
+import { IMPORTED_TAG, planMerge } from './merge';
 import type {
   Artifact,
   Configuration,
@@ -15,8 +17,6 @@ import type {
   Unit,
 } from './types';
 import { SCHEMA_VERSION } from './types';
-import type { MergePlan } from './merge';
-import { IMPORTED_TAG, planMerge } from './merge';
 
 const T = '2026-01-01T00:00:00.000Z';
 
@@ -28,7 +28,12 @@ interface Lineage {
 const config = (
   name: string,
   overrides: Partial<Configuration> = {},
-): Configuration => ({ name, artifactType: 'yaml', archived: false, ...overrides });
+): Configuration => ({
+  name,
+  artifactType: 'yaml',
+  archived: false,
+  ...overrides,
+});
 
 const version = (
   name: string,
@@ -114,7 +119,7 @@ const unitMerge = (localUnits: Unit[], incomingUnits: Unit[]): MergePlan =>
 
 /** Replay a plan onto a dump (replace-or-append by key), for idempotency tests. */
 const applyPlan = (local: DatabaseDump, plan: MergePlan): DatabaseDump => {
-  const byKey = <T,>(
+  const byKey = <T>(
     existing: T[],
     incoming: T[],
     key: (x: T) => string,
@@ -127,7 +132,11 @@ const applyPlan = (local: DatabaseDump, plan: MergePlan): DatabaseDump => {
   };
   return {
     schemaVersion: local.schemaVersion,
-    configurations: byKey(local.configurations, plan.configurations, (c) => c.name),
+    configurations: byKey(
+      local.configurations,
+      plan.configurations,
+      (c) => c.name,
+    ),
     configurationVersions: byKey(
       local.configurationVersions,
       plan.configurationVersions,
@@ -160,7 +169,10 @@ describe('[G1] planMerge', () => {
 
     it('import into an empty database adds everything (restore)', () => {
       const a = lineage('linkml', ['p1', 'p2']);
-      const b = lineage('react', ['q1'], { archived: true, description: 'notes' });
+      const b = lineage('react', ['q1'], {
+        archived: true,
+        description: 'notes',
+      });
       const u = unit('u1', 'linkml', {
         archived: true,
         messages: [message('hi')],
@@ -470,8 +482,20 @@ describe('[G1] planMerge', () => {
         artifacts: [artifact(1, 'A')],
       };
       const plan = unitMerge(
-        [unit('u1', 'cfg', { ...payload, conversationName: 'Mine', archived: false })],
-        [unit('u1', 'cfg', { ...payload, conversationName: 'Theirs', archived: true })],
+        [
+          unit('u1', 'cfg', {
+            ...payload,
+            conversationName: 'Mine',
+            archived: false,
+          }),
+        ],
+        [
+          unit('u1', 'cfg', {
+            ...payload,
+            conversationName: 'Theirs',
+            archived: true,
+          }),
+        ],
       );
       expect(plan.units).toEqual([]);
       expect(plan.report.skippedIdentical).toBe(2);
@@ -489,7 +513,12 @@ describe('[G1] planMerge', () => {
     });
 
     it('clean-prefix longer incoming unit fast-forwards keeping local metadata', () => {
-      const m = [message('one'), message('two'), message('three'), message('four')];
+      const m = [
+        message('one'),
+        message('two'),
+        message('three'),
+        message('four'),
+      ];
       const arts = [artifact(1, 'A')];
       const local = unit('u1', 'cfg', {
         conversationName: 'Mine',
@@ -571,7 +600,11 @@ describe('[G1] planMerge', () => {
       });
       const plan = unitMerge([local], [incoming]);
       expect(plan.units).toEqual([
-        { ...incoming, id: 'minted-1', conversationName: `Draft${IMPORTED_TAG}` },
+        {
+          ...incoming,
+          id: 'minted-1',
+          conversationName: `Draft${IMPORTED_TAG}`,
+        },
       ]);
       expect(plan.report.unitsKeptBoth).toEqual([
         { originalId: 'u1', cloneId: 'minted-1' },
@@ -586,7 +619,11 @@ describe('[G1] planMerge', () => {
       const plan = planMerge(
         db(
           [lineage('linkml', ['p1', 'local2'])],
-          [unit('u1', 'linkml', { messages: [message('one'), message('local two')] })],
+          [
+            unit('u1', 'linkml', {
+              messages: [message('one'), message('local two')],
+            }),
+          ],
         ),
         db([lineage('linkml', ['p1', 'inc2'])], [incomingUnit]),
         mint(),
@@ -742,7 +779,9 @@ describe('[G1] planMerge', () => {
       const incoming = db(
         [lineage('linkml', ['p1', 'inc2'])],
         [
-          unit('u1', 'linkml', { messages: [message('one'), message('theirs')] }),
+          unit('u1', 'linkml', {
+            messages: [message('one'), message('theirs')],
+          }),
           unit('u2', 'linkml'),
         ],
       );
@@ -763,7 +802,9 @@ describe('[G1] planMerge', () => {
           lineage('fresh', ['n1']),
         ],
         [
-          unit('u1', 'linkml', { messages: [message('one'), message('theirs')] }),
+          unit('u1', 'linkml', {
+            messages: [message('one'), message('theirs')],
+          }),
           unit('u2', 'fresh'),
         ],
       );

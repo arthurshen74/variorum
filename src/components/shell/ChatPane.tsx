@@ -24,15 +24,15 @@ import { ChatMessage } from '@/components/chat/ChatMessage';
 import { EDIT_NOTICE_KIND } from '@/domain/edit-notice';
 import { extractArtifact } from '@/domain/extract';
 import type { Unit } from '@/domain/types';
-import { completionFromUIMessage, toUIMessages } from '@/llm/mapping';
 import { VariorumChatTransport } from '@/llm/chat-transport';
+import { completionFromUIMessage, toUIMessages } from '@/llm/mapping';
 import {
   formatTokenReadout,
   getCharsPerToken,
   recordCalibration,
   streamedChars,
-  usageFromMessage,
   type TokenReadout,
+  usageFromMessage,
 } from '@/llm/token-usage';
 import { repository } from '@/persistence/repository';
 import {

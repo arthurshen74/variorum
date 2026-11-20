@@ -20,7 +20,10 @@ const unit = (id: string, configName: string): Unit => ({
   artifacts: [],
 });
 
-const dump = (configNames: string[] = [], units: Unit[] = []): DatabaseDump => ({
+const dump = (
+  configNames: string[] = [],
+  units: Unit[] = [],
+): DatabaseDump => ({
   schemaVersion: SCHEMA_VERSION,
   configurations: configNames.map((name) => ({
     name,

@@ -3,14 +3,14 @@
  * from persisted messages, stripping reasoning from request context,
  * and folding a finished UIMessage back into an AssistantCompletion.
  */
-import { describe, expect, it } from 'vitest';
 import type { UIMessage } from 'ai';
+import { describe, expect, it } from 'vitest';
+import type { Message } from '@/domain/types';
 import {
   completionFromUIMessage,
   toModelMessages,
   toUIMessages,
 } from './mapping';
-import type { Message } from '@/domain/types';
 
 const PERSISTED: Message[] = [
   {
@@ -37,9 +37,9 @@ describe('[G3] mapping', () => {
 
     expect(ui[0]?.parts).toEqual([{ type: 'text', text: 'hi' }]);
     const assistantParts = ui[1]?.parts ?? [];
-    expect(
-      assistantParts.find((p) => p.type === 'reasoning'),
-    ).toMatchObject({ text: 'let me think' });
+    expect(assistantParts.find((p) => p.type === 'reasoning')).toMatchObject({
+      text: 'let me think',
+    });
     expect(assistantParts.find((p) => p.type === 'text')).toMatchObject({
       text: 'hello',
     });

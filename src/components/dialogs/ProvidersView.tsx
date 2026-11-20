@@ -14,24 +14,24 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  readProviderDocument,
-  writeProviderDocument,
-  ProviderDocumentError,
   type Endpoint,
   type ModelRow,
   type ProviderDocument,
+  ProviderDocumentError,
+  readProviderDocument,
+  writeProviderDocument,
 } from '@/llm/provider-document';
 import {
   addEndpoint,
   addModel,
   deleteEndpoint,
   deleteModel,
-  reassignModel,
-  updateEndpoint,
-  updateModel,
   type EndpointInput,
   type ModelInput,
   type MutationResult,
+  reassignModel,
+  updateEndpoint,
+  updateModel,
 } from '@/llm/provider-mutations';
 import { useVariorum } from '@/state/store';
 import EndpointForm from './EndpointForm';
@@ -39,13 +39,13 @@ import ModelForm from './ModelForm';
 import {
   blankEndpointDraft,
   blankModelDraft,
+  type EndpointDraft,
   endpointDraftFrom,
   endpointLabel,
   hasKeyGap,
+  type ModelDraft,
   modelDraftFrom,
   referencedUnboundHandles,
-  type EndpointDraft,
-  type ModelDraft,
 } from './provider-form';
 
 export interface ProvidersViewProps {
@@ -112,9 +112,9 @@ export default function ProvidersView({ onBack }: ProvidersViewProps) {
   // the tree the hint list is a list only.
   const first = providers?.endpoints[0];
   const unbound =
-    providers === null
-      ? []
-      : referencedUnboundHandles(configurations, versions, providers);
+    providers === null ?
+      []
+    : referencedUnboundHandles(configurations, versions, providers);
 
   function commit(result: MutationResult): boolean {
     if (!result.ok) {
@@ -138,9 +138,9 @@ export default function ProvidersView({ onBack }: ProvidersViewProps) {
     id: string | null,
   ) {
     const result =
-      id === null
-        ? addEndpoint(document, input, crypto.randomUUID())
-        : updateEndpoint(document, id, input);
+      id === null ?
+        addEndpoint(document, input, crypto.randomUUID())
+      : updateEndpoint(document, id, input);
     if (commit(result)) showTree();
   }
 
@@ -166,9 +166,9 @@ export default function ProvidersView({ onBack }: ProvidersViewProps) {
       return;
     }
     const moved =
-      endpointId === fromEndpointId
-        ? updated
-        : reassignModel(updated.document, input.handle, endpointId);
+      endpointId === fromEndpointId ? updated : (
+        reassignModel(updated.document, input.handle, endpointId)
+      );
     if (commit(moved)) showTree();
   }
 
@@ -219,7 +219,10 @@ export default function ProvidersView({ onBack }: ProvidersViewProps) {
       </DialogHeader>
 
       {message !== null && (
-        <p role="alert" className={ALERT_CLASS}>
+        <p
+          role="alert"
+          className={ALERT_CLASS}
+        >
           {message}
         </p>
       )}
@@ -278,7 +281,10 @@ export default function ProvidersView({ onBack }: ProvidersViewProps) {
                   {/* The explicit space keeps the row's own text from
                       running into the button labels beside it. */}
                   {endpoint.models.map((model) => (
-                    <li key={model.handle} className={ROW_CLASS}>
+                    <li
+                      key={model.handle}
+                      className={ROW_CLASS}
+                    >
                       <div className="min-w-0 flex-1">
                         <span className="block truncate font-medium">
                           {model.handle}
@@ -311,9 +317,15 @@ export default function ProvidersView({ onBack }: ProvidersViewProps) {
           {unbound.length > 0 && (
             <div className="grid gap-1">
               <span className={LABEL_CLASS}>{UNBOUND_LIST_LABEL}</span>
-              <ul aria-label={UNBOUND_LIST_LABEL} className="grid gap-1">
+              <ul
+                aria-label={UNBOUND_LIST_LABEL}
+                className="grid gap-1"
+              >
                 {unbound.map((handle) => (
-                  <li key={handle} className={ROW_CLASS}>
+                  <li
+                    key={handle}
+                    className={ROW_CLASS}
+                  >
                     <span className="min-w-0 flex-1 truncate">{handle}</span>{' '}
                     {first !== undefined && (
                       <Button
@@ -364,7 +376,10 @@ export default function ProvidersView({ onBack }: ProvidersViewProps) {
       )}
 
       <DialogFooter>
-        <Button variant="outline" onClick={onBack}>
+        <Button
+          variant="outline"
+          onClick={onBack}
+        >
           Back
         </Button>
       </DialogFooter>

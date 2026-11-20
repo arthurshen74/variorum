@@ -5,8 +5,7 @@
  * sits untouched in the buffer.
  */
 import { describe, expect, it } from 'vitest';
-
-import { chipFor, viewGateFor, type ViewBuffer } from './view-buffer';
+import { chipFor, type ViewBuffer, viewGateFor } from './view-buffer';
 
 function buffer(partial: Partial<ViewBuffer>): ViewBuffer {
   return {
@@ -48,9 +47,9 @@ describe('[G1] view-buffer', () => {
   });
 
   it('chipFor: untouched viewed revision reads "viewing vN"', () => {
-    expect(chipFor(buffer({ working: 'old', viewedVersion: 3 }), 'latest')).toBe(
-      'viewing v3',
-    );
+    expect(
+      chipFor(buffer({ working: 'old', viewedVersion: 3 }), 'latest'),
+    ).toBe('viewing v3');
   });
 
   it('chipFor: viewed bytes equal to latest still read "viewing vN"', () => {

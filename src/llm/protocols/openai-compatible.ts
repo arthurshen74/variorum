@@ -22,9 +22,9 @@ function extraBodyFields(
 ): Record<string, unknown> {
   return {
     ...(version.topK !== undefined ? { [BODY_TOP_K]: version.topK } : {}),
-    ...(version.reasoningEffort !== undefined
-      ? { [BODY_REASONING_EFFORT]: version.reasoningEffort }
-      : {}),
+    ...(version.reasoningEffort !== undefined ?
+      { [BODY_REASONING_EFFORT]: version.reasoningEffort }
+    : {}),
   };
 }
 

@@ -12,10 +12,10 @@ import {
   protocolAdapter,
 } from '@/llm/protocols/registry';
 import {
-  normalizeApiKey,
-  parseEndpointUrl,
   type Endpoint,
   type ModelRow,
+  normalizeApiKey,
+  parseEndpointUrl,
   type ProviderDocument,
 } from '@/llm/provider-document';
 import type { EndpointInput, ModelInput } from '@/llm/provider-mutations';
